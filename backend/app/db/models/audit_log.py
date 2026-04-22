@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, DateTime, JSON, Integer, Boolean, Foreign
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
-from app.db.base import Base
+from app.db.models.base import Base
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
