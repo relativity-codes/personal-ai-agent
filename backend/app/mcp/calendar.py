@@ -6,8 +6,9 @@ from typing import Any
 import httpx
 
 from app.config import Settings
+from app.core.google_token import access_token_for_calendar
 from app.mcp.base import MCPServer
-from app.mcp.schema import ToolDefinition
+from app.mcp.schema import MCPInvokeOAuth, ToolDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -17,22 +18,50 @@ CALENDAR_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/
 class CalendarMCPServer(MCPServer):
     id = "calendar"
     display_name = "Google Calendar"
-    description = "Fetch events and detect conflicts (OAuth required for live calls in v1)."
+    description = "Fetch events using a refresh token (client id + secret) or a static calendar access token."
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
+    def _has_refresh_credentials(self) -> bool:
+        return bool(
+            self._settings.GOOGLE_CLIENT_ID
+            and self._settings.GOOGLE_CLIENT_SECRET
+            and (self._settings.GOOGLE_REFRESH_TOKEN or "").strip()
+        )
+
+    def _refresh_token(self, oauth: MCPInvokeOAuth | None) -> str:
+        if oauth and (oauth.google_refresh_token or "").strip():
+            return oauth.google_refresh_token.strip()
+        return (self._settings.GOOGLE_REFRESH_TOKEN or "").strip()
+
+    def _list_events_ready(self, oauth: MCPInvokeOAuth | None) -> bool:
+        if oauth and (oauth.google_calendar_access_token or "").strip():
+            return True
+        if (self._settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip():
+            return True
+        rt = self._refresh_token(oauth)
+        return bool(
+            self._settings.GOOGLE_CLIENT_ID
+            and self._settings.GOOGLE_CLIENT_SECRET
+            and rt
+        )
+
+    def _list_events_invocation_allowed(self, oauth: MCPInvokeOAuth | None) -> bool:
+        return self._list_events_ready(oauth) or self.is_configured()
+
     def is_configured(self) -> bool:
         return bool(
-            (self._settings.GOOGLE_CLIENT_ID and self._settings.GOOGLE_CLIENT_SECRET)
-            or (self._settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip()
+            (self._settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip()
+            or self._has_refresh_credentials()
+            or (self._settings.GOOGLE_CLIENT_ID and self._settings.GOOGLE_CLIENT_SECRET)
         )
 
     async def list_tools(self) -> list[ToolDefinition]:
         return [
             ToolDefinition(
                 name="list_events",
-                description="List calendar events in a time range (requires Google OAuth token).",
+                description="List calendar events in a time range (env tokens or invoke.oauth.google_refresh_token / google_calendar_access_token).",
                 input_schema={
                     "type": "object",
                     "properties": {
@@ -60,25 +89,35 @@ class CalendarMCPServer(MCPServer):
             ),
         ]
 
-    def _has_access_token(self) -> bool:
-        return bool((self._settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip())
-
-    async def invoke(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def invoke(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        oauth: MCPInvokeOAuth | None = None,
+    ) -> dict[str, Any]:
         if tool_name == "list_events":
-            if not self.is_configured():
+            if not self._list_events_invocation_allowed(oauth):
                 return {
                     "ok": False,
                     "error": "not_configured",
-                    "message": "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (OAuth app) and/or GOOGLE_CALENDAR_ACCESS_TOKEN.",
+                    "message": (
+                        "Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN "
+                        "(recommended), or set GOOGLE_CALENDAR_ACCESS_TOKEN for a pasted access token. "
+                        "You may also pass oauth.google_refresh_token or oauth.google_calendar_access_token on invoke."
+                    ),
                 }
-            if not self._has_access_token():
+            token = await access_token_for_calendar(
+                self._settings,
+                calendar_access_token=oauth.google_calendar_access_token if oauth else None,
+                refresh_token=oauth.google_refresh_token if oauth else None,
+            )
+            if not token:
                 return {
                     "ok": False,
                     "error": "oauth_token_required",
                     "message": (
-                        "Client ID and secret register your app with Google, but the Calendar API needs a "
-                        "user access token. Run an OAuth consent flow, then put the access token in "
-                        "GOOGLE_CALENDAR_ACCESS_TOKEN (refresh-token storage can be added later)."
+                        "Could not obtain an access token. Add GOOGLE_REFRESH_TOKEN from a completed "
+                        "OAuth consent flow, or set GOOGLE_CALENDAR_ACCESS_TOKEN."
                     ),
                     "docs": "https://developers.google.com/identity/protocols/oauth2",
                 }
@@ -87,7 +126,6 @@ class CalendarMCPServer(MCPServer):
             if not time_min or not time_max:
                 return {"ok": False, "error": "validation_error", "message": "time_min and time_max (RFC3339) are required."}
             max_results = min(int(arguments.get("max_results", 20)), 250)
-            token = (self._settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip()
             headers = {"Authorization": f"Bearer {token}"}
             params = {
                 "timeMin": time_min,

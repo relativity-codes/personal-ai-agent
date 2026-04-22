@@ -7,7 +7,7 @@ import httpx
 
 from app.config import Settings
 from app.mcp.base import MCPServer
-from app.mcp.schema import ToolDefinition
+from app.mcp.schema import MCPInvokeOAuth, ToolDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,11 @@ class GitHubMCPServer(MCPServer):
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._token = (settings.GITHUB_TOKEN or "").strip()
+
+    def _effective_token(self, oauth: MCPInvokeOAuth | None) -> str:
+        if oauth and (oauth.github_token or "").strip():
+            return oauth.github_token.strip()
+        return self._token
 
     def is_configured(self) -> bool:
         return bool(self._token)
@@ -55,12 +60,18 @@ class GitHubMCPServer(MCPServer):
             ),
         ]
 
-    async def invoke(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        if not self.is_configured():
+    async def invoke(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        oauth: MCPInvokeOAuth | None = None,
+    ) -> dict[str, Any]:
+        token = self._effective_token(oauth)
+        if not token:
             return {
                 "ok": False,
                 "error": "not_configured",
-                "message": "Set GITHUB_TOKEN in the environment to call GitHub tools.",
+                "message": "Set GITHUB_TOKEN or pass oauth.github_token on invoke.",
             }
         owner = arguments.get("owner")
         repo = arguments.get("repo")
@@ -71,10 +82,10 @@ class GitHubMCPServer(MCPServer):
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
-        if self._token.startswith("ghp_") or self._token.startswith("github_pat_"):
-            headers["Authorization"] = f"Bearer {self._token}"
+        if token.startswith("ghp_") or token.startswith("github_pat_"):
+            headers["Authorization"] = f"Bearer {token}"
         else:
-            headers["Authorization"] = f"token {self._token}"
+            headers["Authorization"] = f"token {token}"
 
         path = f"https://api.github.com/repos/{owner}/{repo}"
         try:

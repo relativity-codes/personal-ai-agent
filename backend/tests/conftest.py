@@ -7,7 +7,7 @@ from app.core.openrouter import OpenRouterClient
 from app.db.session import close_db, init_db
 from app.main import app
 from app.services.cache_service import redis_client
-from app.services.mcp_registry import mcp_registry
+from app.mcp.registry import mcp_registry
 
 
 @pytest_asyncio.fixture

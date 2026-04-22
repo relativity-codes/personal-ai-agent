@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.mcp_registry import MCPRegistryService
+from app.mcp.registry import MCPRegistryService
 
 
 @pytest.mark.asyncio
