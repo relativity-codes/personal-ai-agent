@@ -16,13 +16,13 @@ router = APIRouter()
 
 @router.get("/servers")
 async def list_mcp_servers(user: dict = Depends(get_current_user)) -> dict[str, Any]:
-    _ = user
+    logger.debug("mcp.list_servers user_id=%s", user.get("user_id"))
     return {"servers": mcp_registry.list_servers()}
 
 
 @router.get("/tools")
 async def list_mcp_tools(user: dict = Depends(get_current_user)) -> dict[str, Any]:
-    _ = user
+    logger.debug("mcp.list_tools user_id=%s", user.get("user_id"))
     integrations = await mcp_registry.list_all_tools()
     return {"integrations": integrations}
 
@@ -49,7 +49,18 @@ async def invoke_mcp_tool(
             "user_id": user.get("user_id"),
         },
     )
-    raw = await server.invoke(body.tool, body.arguments)
+    try:
+        raw = await server.invoke(body.tool, body.arguments)
+    except Exception as exc:
+        logger.exception(
+            "mcp.invoke crashed server_id=%s tool=%s",
+            body.server_id,
+            body.tool,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Tool invocation failed; see server logs.",
+        ) from exc
     ok = bool(raw.get("ok")) if isinstance(raw, dict) else False
     err = raw.get("error") if isinstance(raw, dict) else None
     return InvokeResponse(
