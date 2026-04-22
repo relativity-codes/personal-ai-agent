@@ -6,6 +6,6 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     class Config:
-        env_file = "../../.env"   # points to root .env
+        env_file = "../.env"   # points to root .env
 
 settings = Settings()
