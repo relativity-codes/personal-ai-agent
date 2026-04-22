@@ -1,5 +1,7 @@
 import pytest
 
+from app.config import settings
+
 
 @pytest.mark.asyncio
 async def test_mcp_servers_lists_integrations(client):
@@ -44,6 +46,7 @@ async def test_mcp_invoke_unknown_tool(client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(bool(settings.GITHUB_TOKEN.strip()), reason="GITHUB_TOKEN is set; not_configured path not applicable")
 async def test_mcp_invoke_github_without_token(client):
     r = await client.post(
         "/api/v1/mcp/invoke",
@@ -57,6 +60,23 @@ async def test_mcp_invoke_github_without_token(client):
     body = r.json()
     assert body["ok"] is False
     assert body["result"].get("error") == "not_configured"
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not settings.GITHUB_TOKEN.strip(), reason="GITHUB_TOKEN not set")
+async def test_mcp_invoke_github_list_prs_live(client):
+    r = await client.post(
+        "/api/v1/mcp/invoke",
+        json={
+            "server_id": "github",
+            "tool": "list_open_pull_requests",
+            "arguments": {"owner": "octocat", "repo": "Hello-World", "state": "open"},
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert "pull_requests" in body["result"]
 
 
 @pytest.mark.asyncio

@@ -47,7 +47,12 @@ Authenticated routes (dev bypass uses a stub user when `DEV_AUTH_BYPASS=true`):
 - `GET /api/v1/mcp/tools` — tool catalog per integration (JSON Schema `input_schema` on each tool).
 - `POST /api/v1/mcp/invoke` — body `{ "server_id": "github", "tool": "list_open_pull_requests", "arguments": { ... } }`.
 
-Secrets: set `GITHUB_TOKEN` and/or `NOTION_TOKEN` in `.env` for live GitHub/Notion calls. Calendar live calls need OAuth or `GOOGLE_CALENDAR_ACCESS_TOKEN` (stub otherwise). Gmail is optional (`GMAIL_ACCESS_TOKEN`).
+Secrets:
+
+- **GitHub:** `GITHUB_TOKEN` (PAT with `repo` or appropriate scopes for the repos you query).
+- **Notion:** `NOTION_TOKEN` (integration token; share databases/pages with the integration).
+- **Google Calendar:** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` define the OAuth client only. To call `list_events`, add **`GOOGLE_CALENDAR_ACCESS_TOKEN`** (a user OAuth access token from the consent flow). Short-lived tokens expire; refresh-token support is a follow-up.
+- **Gmail (optional):** `GMAIL_ACCESS_TOKEN` (v1.1).
 
 ## Tests
 
