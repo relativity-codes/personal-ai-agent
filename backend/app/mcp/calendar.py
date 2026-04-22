@@ -1,0 +1,2 @@
+class CalendarMCPServer:
+    pass
