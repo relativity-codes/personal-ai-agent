@@ -39,6 +39,16 @@ The server listens on port **8000** by default.
 - ReDoc: `http://localhost:8000/redoc`
 - OpenAPI JSON: `http://localhost:8000/openapi.json`
 
+## MCP tool APIs
+
+Authenticated routes (dev bypass uses a stub user when `DEV_AUTH_BYPASS=true`):
+
+- `GET /api/v1/mcp/servers` — registered integrations (GitHub, Notion, Calendar, Gmail) and `configured` flags.
+- `GET /api/v1/mcp/tools` — tool catalog per integration (JSON Schema `input_schema` on each tool).
+- `POST /api/v1/mcp/invoke` — body `{ "server_id": "github", "tool": "list_open_pull_requests", "arguments": { ... } }`.
+
+Secrets: set `GITHUB_TOKEN` and/or `NOTION_TOKEN` in `.env` for live GitHub/Notion calls. Calendar live calls need OAuth or `GOOGLE_CALENDAR_ACCESS_TOKEN` (stub otherwise). Gmail is optional (`GMAIL_ACCESS_TOKEN`).
+
 ## Tests
 
 ```bash
