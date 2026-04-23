@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD")
     POSTGRES_DB: str = config("POSTGRES_DB")
 
-
     POSTGRES_SSL_MODE: Optional[str] = config("POSTGRES_SSL_MODE", default=None)
     _POSTGRES_SSL_ROOT_CERT: Optional[str] = config("POSTGRES_SSL_ROOT_CERT", default=None)
 
