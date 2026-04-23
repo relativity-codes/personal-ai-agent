@@ -5,7 +5,9 @@ set -e
 
 # --- Setup Virtual Environment ---
 echo "Setting up virtual environment..."
-uv venv
+if [ ! -d ".venv" ]; then
+  uv venv
+fi
 echo "Virtual environment set up."
 
 # --- Environment Setup ---
