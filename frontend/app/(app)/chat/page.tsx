@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { ChatInterface } from "@/components/chat/ChatInterface";
 
 export const metadata: Metadata = {
   title: "Chat",
-  description: "Main AI interaction interface.",
+  description: "Talk to your Personal AI Agent — it handles GitHub, Notion, Calendar, and Gmail.",
 };
 
 export default function ChatPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-        Chat UI will be implemented in the chat feature track. Navigation shell is shared (§3).
-      </p>
-    </div>
+    <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-500">Loading chat…</div>}>
+      <ChatInterface />
+    </Suspense>
   );
 }
