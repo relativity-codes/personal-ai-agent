@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol
 
 from app.mcp.schema import MCPInvokeOAuth, ToolDefinition
+
+
+class MCPUserBoundClient(Protocol):
+    async def execute(self, tool: str, parameters: dict[str, Any]) -> dict[str, Any]: ...
+
+
+class MCPRegistry(Protocol):
+    def get_client(self, server_id: str, user_id: str) -> MCPUserBoundClient: ...
 
 
 class MCPServer(ABC):

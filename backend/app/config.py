@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from decouple import config
 
 def _parse_env_list(value: str, fallback: list[str]) -> list[str]:
     s = (value or "").strip()
@@ -18,21 +18,23 @@ def _parse_env_list(value: str, fallback: list[str]) -> list[str]:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     APP_NAME: str = "Personal AI Agent"
     APP_ENV: str = "development"
     DEBUG: bool = True
     DEV_AUTH_BYPASS: bool = True
+    # Stable UUID string for the seeded dev user (see app.db.session._ensure_dev_user_row).
+    DEV_USER_INTERNAL_ID: str = "11111111-1111-1111-1111-111111111111"
 
     CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8000")
     ALLOWED_HOSTS: str = Field(default="localhost,127.0.0.1,test,*")
 
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "personal_ai_agent"
+    POSTGRES_HOST: str = config("POSTGRES_HOST")
+    POSTGRES_PORT: int = config("POSTGRES_PORT")
+    POSTGRES_USER: str = config("DB_USER")
+    POSTGRES_PASSWORD: str = config("DB_PASSWORD")
+    POSTGRES_DB: str = config("POSTGRES_DB")
 
     @property
     def DATABASE_URL(self) -> str:
@@ -83,6 +85,8 @@ class Settings(BaseSettings):
     CLERK_SECRET_KEY: str = ""
     CLERK_PUBLISHABLE_KEY: str = ""
     CLERK_WEBHOOK_SECRET: str = ""
+    # Clerk session JWT issuer, e.g. https://your-instance.clerk.accounts.dev
+    CLERK_ISSUER: str = ""
 
     GITHUB_CLIENT_ID: Optional[str] = None
     GITHUB_CLIENT_SECRET: Optional[str] = None
