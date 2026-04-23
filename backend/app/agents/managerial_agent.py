@@ -8,6 +8,7 @@ from app.agents.task_planner_agent import create_task_planner_node
 from app.agents.action_agent import create_action_node
 from app.agents.response_agent import create_response_node # Import the new response node
 from app.core.openrouter import OpenRouterClient
+from app.core.config import settings
 from app.db.repositories.plan_repository import PlanRepository
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
@@ -39,7 +40,7 @@ def create_managerial_graph() -> StateGraph:
     This graph defines the complete workflow, from intent classification to final response.
     """
     # Initialize dependencies
-    openrouter = OpenRouterClient()
+    openrouter = OpenRouterClient(api_key=settings.OPENROUTER_API_KEY)
     plan_repo = PlanRepository()
     user_repo = UserRepository()
     audit_repo = AuditRepository()
