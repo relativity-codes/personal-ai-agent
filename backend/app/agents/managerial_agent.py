@@ -42,7 +42,7 @@ def create_managerial_graph() -> StateGraph:
     
     # Create all the agent nodes
     intent_node = create_intent_node(openrouter)
-    task_planner_node = create_task_planner_node(plan_repo)
+    task_planner_node = create_task_planner_node(plan_repo, openrouter)
     action_node = create_action_node(mcp_registry)
     response_node = create_response_node(openrouter) # Create the new response node
     

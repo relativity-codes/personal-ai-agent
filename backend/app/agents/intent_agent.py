@@ -1,3 +1,4 @@
+
 from langgraph.graph import StateGraph, END
 from typing import Dict, Any
 import json
@@ -36,7 +37,7 @@ class IntentAgent:
         content = response["choices"][0]["message"]["content"]
         
         # Extract JSON
-        json_match = re.search(r'```json\\n(.*?)\\n```', content, re.DOTALL)
+        json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
         if json_match:
             content = json_match.group(1)
         
@@ -78,7 +79,7 @@ class IntentAgent:
         content = response["choices"][0]["message"]["content"]
         
         # The validator prompt is expected to return a JSON object with a "clarification_question" key.
-        json_match = re.search(r'```json\\n(.*?)\\n```', content, re.DOTALL)
+        json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
         if json_match:
             content = json_match.group(1)
         
@@ -91,13 +92,20 @@ class IntentAgent:
             
         return state
 
-def create_intent_node(openrouter_client: OpenRouterClient):
-    """Create Intent Agent node for LangGraph."""
-    agent = IntentAgent(openrouter_client)
+def create_intent_workflow(openrouter_client: OpenRouterClient) -> StateGraph:
+    """Creates the intent workflow."""
+    intent_agent = IntentAgent(openrouter_client)
+
+    workflow = StateGraph(AgentState)
+    workflow.add_node("classify_intent", intent_agent.classify_intent)
+    workflow.add_node("validate_intent", intent_agent.validate_intent)
+
+    workflow.set_entry_point("classify_intent")
+
+    workflow.add_conditional_edges(
+        "classify_intent",
+        lambda state: "validate_intent" if state.get("needs_clarification") else END,
+    )
+    workflow.add_edge("validate_intent", END)
     
-    async def intent_node(state: AgentState) -> AgentState:
-        state = await agent.classify_intent(state)
-        state = await agent.validate_intent(state)
-        return state
-    
-    return intent_node
+    return workflow.compile()
