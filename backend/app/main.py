@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.v1 import agents, chat, mcp, mcp_oauth, webhooks
+from app.api.v1 import agents, chat, mcp, mcp_oauth, users, webhooks
 from app.api.websocket import chat as ws_chat
 from app.config import settings
 from app.core.openrouter import OpenRouterClient
@@ -50,6 +50,7 @@ app.add_middleware(
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts_list)
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
 app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])
 app.include_router(mcp_oauth.router, prefix="/api/v1/mcp", tags=["mcp"])

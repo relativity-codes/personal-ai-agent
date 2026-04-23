@@ -1,8 +1,8 @@
-class AuditRepository:
-    pass
-from app.db.models.audit_log import AuditLog
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+
+from app.db.models.audit_log import AuditLog
+
 
 class AuditRepository:
     @staticmethod

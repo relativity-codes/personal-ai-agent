@@ -3,13 +3,13 @@ from langgraph.graph import StateGraph, END
 from typing import Literal
 
 from app.agents.state import AgentState
-from app.agents.intent_agent import create_intent_node
+from app.agents.intent_agent import create_intent_workflow
 from app.agents.task_planner_agent import create_task_planner_node
 from app.agents.action_agent import create_action_node
 from app.agents.response_agent import create_response_node # Import the new response node
 from app.core.openrouter import OpenRouterClient
 from app.db.repositories.plan_repository import PlanRepository
-from app.services.mcp_registry import mcp_registry
+from app.mcp.registry import mcp_registry
 
 def should_continue(state: AgentState) -> Literal["task_planner", "action", "response", END]:
     """
@@ -40,8 +40,8 @@ def create_managerial_graph() -> StateGraph:
     openrouter = OpenRouterClient()
     plan_repo = PlanRepository()
     
-    # Create all the agent nodes
-    intent_node = create_intent_node(openrouter)
+    # Intent: upstream subgraph (classify → validate or END)
+    intent_subgraph = create_intent_workflow(openrouter)
     task_planner_node = create_task_planner_node(plan_repo, openrouter)
     action_node = create_action_node(mcp_registry)
     response_node = create_response_node(openrouter) # Create the new response node
@@ -50,7 +50,7 @@ def create_managerial_graph() -> StateGraph:
     workflow = StateGraph(AgentState)
     
     # Add nodes to the graph
-    workflow.add_node("intent", intent_node)
+    workflow.add_node("intent", intent_subgraph)
     workflow.add_node("task_planner", task_planner_node)
     workflow.add_node("action", action_node)
     workflow.add_node("response", response_node)

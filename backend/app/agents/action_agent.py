@@ -27,7 +27,8 @@ class ActionAgent:
         
         try:
             # Get MCP client for user
-            mcp_client = self.mcp_registry.get_client(mcp_server, state["user_id"])
+            principal = state.get("clerk_sub") or state["user_id"]
+            mcp_client = self.mcp_registry.get_client(mcp_server, principal)
             
             # Execute with timeout
             result = await asyncio.wait_for(
