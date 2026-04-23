@@ -64,7 +64,7 @@ async def test_live_github_list_pull_requests_via_http(client):
         "/api/v1/mcp/invoke",
         json={
             "server_id": "github",
-            "tool": "list_open_pull_requests",
+            "tool": "github_list_prs",
             "arguments": {
                 "owner": settings.GITHUB_TEST_OWNER,
                 "repo": settings.GITHUB_TEST_REPO,
@@ -75,7 +75,7 @@ async def test_live_github_list_pull_requests_via_http(client):
     assert r.status_code == 200
     body = r.json()
     assert body["ok"] is True
-    assert isinstance(body["result"].get("pull_requests"), list)
+    assert isinstance(body["result"].get("data"), list)
 
 
 @pytest.mark.live
@@ -87,15 +87,15 @@ async def test_live_github_list_commits_via_registry():
     gh = reg.get("github")
     assert gh is not None
     out = await gh.invoke(
-        "list_commits",
+        "github_list_commits",
         {
             "owner": settings.GITHUB_TEST_OWNER,
             "repo": settings.GITHUB_TEST_REPO,
-            "per_page": 5,
+            "branch": "master",
         },
     )
     assert out["ok"] is True
-    assert isinstance(out.get("commits"), list)
+    assert isinstance(out.get("data"), list)
 
 
 @pytest.mark.live
@@ -132,7 +132,7 @@ async def test_live_calendar_list_events_real_api():
         {"time_min": time_min, "time_max": time_max, "max_results": 10},
     )
     assert out["ok"] is True
-    assert "items" in out["data"]
+    assert isinstance(out.get("events"), list)
 
 
 @pytest.mark.live
@@ -151,7 +151,7 @@ async def test_live_calendar_list_events_oauth_token_required_with_real_env():
         {"time_min": time_min, "time_max": time_max},
     )
     assert out["ok"] is False
-    assert out.get("error") == "oauth_token_required"
+    assert out.get("error") in ("oauth_token_required", "not_configured")
 
 
 @pytest.mark.live

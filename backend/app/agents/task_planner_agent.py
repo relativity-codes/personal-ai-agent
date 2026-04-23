@@ -7,6 +7,8 @@ from datetime import datetime
 
 from app.agents.state import AgentState, Task, TaskStatus
 from app.db.repositories.plan_repository import PlanRepository
+from app.db.repositories.user_repository import UserRepository
+from app.db.repositories.audit_repository import AuditRepository
 from app.services.cache_service import redis_client
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import MANAGER_TASK_DECOMPOSER_PROMPT
@@ -17,9 +19,11 @@ class TaskPlannerAgent:
     Uses an LLM for dynamic task decomposition and rule-based logic for dependency tracking.
     """
 
-    def __init__(self, plan_repo: PlanRepository, openrouter_client: OpenRouterClient):
+    def __init__(self, plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
         self.plan_repo = plan_repo
         self.openrouter = openrouter_client
+        self.user_repo = user_repo
+        self.audit_repo = audit_repo
 
     async def create_plan(self, state: AgentState) -> AgentState:
         """
@@ -247,9 +251,9 @@ class TaskPlannerAgent:
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to decode JSON from LLM response: {e}")
 
-def create_task_planner_node(plan_repo: PlanRepository, openrouter_client: OpenRouterClient):
+def create_task_planner_node(plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
     """Create Task Planner node for LangGraph."""
-    agent = TaskPlannerAgent(plan_repo, openrouter_client)
+    agent = TaskPlannerAgent(plan_repo, openrouter_client, user_repo, audit_repo)
 
     async def task_planner_node(state: AgentState) -> AgentState:
         if not state.get("plan_id"):

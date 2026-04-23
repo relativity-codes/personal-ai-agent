@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import json
 import logging
 from typing import Any, Optional
 
@@ -35,11 +38,29 @@ class RedisCache:
         except Exception as exc:
             return f"error: {exc}"
 
-    async def get_json(self, key: str) -> Any:
-        return None
+    async def get_json(self, key: str) -> Any | None:
+        if self._client is None:
+            return None
+        try:
+            raw = await self._client.get(key)
+            if raw is None:
+                return None
+            return json.loads(raw)
+        except Exception as exc:
+            logger.debug("redis get_json %s: %s", key, exc)
+            return None
 
     async def set_json(self, key: str, value: Any, ttl: int = 3600) -> None:
-        return None
+        if self._client is None:
+            return
+        try:
+            payload = json.dumps(value, default=str)
+            if ttl > 0:
+                await self._client.setex(key, ttl, payload)
+            else:
+                await self._client.set(key, payload)
+        except Exception as exc:
+            logger.debug("redis set_json %s: %s", key, exc)
 
 
 redis_client = RedisCache()

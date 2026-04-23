@@ -1,4 +1,4 @@
-from typing import TypedDict, List, Dict, Any, Optional, Annotated
+from typing import TypedDict, List, Dict, Any, Optional, Annotated, NotRequired
 from dataclasses import dataclass
 from enum import Enum
 import operator
@@ -23,11 +23,14 @@ class Task(TypedDict):
 
 class AgentState(TypedDict):
     """State shared across all agents in the LangGraph workflow."""
-    
+
     # User input
     user_id: str
+    clerk_sub: NotRequired[str]
     session_id: str
     user_input: str
+    results: NotRequired[List[Any]]
+    chat_history: List[Dict[str, str]]
     
     # Intent Agent output
     validated_intent: Optional[Dict[str, Any]]

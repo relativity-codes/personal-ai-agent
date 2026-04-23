@@ -1,14 +1,18 @@
-from sqlalchemy import Column, String, DateTime, JSON, Boolean
+import uuid
+
+from sqlalchemy import Boolean, Column, DateTime, JSON, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
+
 from app.db.models.base import Base
+
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    #clerk_id = Column(String(255), unique=True, nullable=False, index=True)
+    clerk_id = Column(String(255), unique=True, nullable=False, index=True)
     email = Column(String(255), nullable=False)
     name = Column(String(255))
     avatar_url = Column(String(500))
@@ -21,5 +25,5 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     is_active = Column(Boolean, default=True)
-    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+
     plans = relationship("ExecutionPlan", back_populates="user", cascade="all, delete-orphan")

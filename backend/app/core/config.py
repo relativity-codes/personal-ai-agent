@@ -1,11 +1,5 @@
-from pydantic_settings import BaseSettings
+"""Legacy entry point — use ``app.config.settings`` for application configuration."""
 
-class Settings(BaseSettings):
-    DATABASE_URL: str
-    APP_NAME: str = "Personal AI Agent"
-    DEBUG: bool = False
+from app.config import settings
 
-    class Config:
-        env_file = "../.env"   # points to root .env
-
-settings = Settings()
+__all__ = ["settings"]
