@@ -1,0 +1,2 @@
+# Minimal deps for scripts/eval/run_batch.py (no backend package install required).
+httpx>=0.28
