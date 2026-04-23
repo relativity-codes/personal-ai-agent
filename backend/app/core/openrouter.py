@@ -1,9 +1,9 @@
 
 import httpx
 from typing import List, Dict, Any
-
+from app.core.config import settings
 class OpenRouterClient:
-    def __init__(self, api_key: str, base_url: str = "https://openrouter.ai/api/v1"):
+    def __init__(self, api_key: str = settings.OPENROUTER_API_KEY, base_url: str = "https://openrouter.ai/api/v1"):
         self.api_key = api_key
         self.base_url = base_url
         self.client = httpx.AsyncClient()
