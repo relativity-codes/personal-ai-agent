@@ -23,7 +23,7 @@ async def test_mcp_tools_lists_tool_catalog(client):
     data = r.json()
     assert "integrations" in data
     by_id = {b["server_id"]: b for b in data["integrations"]}
-    assert "list_open_pull_requests" in {t["name"] for t in by_id["github"]["tools"]}
+    assert "github_list_prs" in {t["name"] for t in by_id["github"]["tools"]}
     assert "query_database" in {t["name"] for t in by_id["notion"]["tools"]}
 
 

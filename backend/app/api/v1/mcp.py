@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
-    "github_list_open_pull_requests": {
+    "github_list_prs": {
         "summary": "GitHub: list open PRs",
         "description": "Requires GITHUB_TOKEN. Replace owner/repo.",
         "value": {
             "server_id": "github",
-            "tool": "list_open_pull_requests",
+            "tool": "github_list_prs",
             "arguments": {"owner": "octocat", "repo": "Hello-World", "state": "open"},
         },
     },
@@ -27,8 +27,8 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
         "summary": "GitHub: list commits",
         "value": {
             "server_id": "github",
-            "tool": "list_commits",
-            "arguments": {"owner": "octocat", "repo": "Hello-World", "sha": "HEAD", "per_page": 10},
+            "tool": "github_list_commits",
+            "arguments": {"owner": "octocat", "repo": "Hello-World", "branch": "main"},
         },
     },
     "notion_query_database": {
