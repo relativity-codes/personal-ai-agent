@@ -32,8 +32,8 @@ class Settings(BaseSettings):
 
     POSTGRES_HOST: str = config("POSTGRES_HOST")
     POSTGRES_PORT: int = config("POSTGRES_PORT")
-    POSTGRES_USER: str = config("DB_USER")
-    POSTGRES_PASSWORD: str = config("DB_PASSWORD")
+    POSTGRES_USER: str = config("POSTGRES_USER")
+    POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD")
     POSTGRES_DB: str = config("POSTGRES_DB")
 
     @property
