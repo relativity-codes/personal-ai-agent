@@ -78,20 +78,11 @@ class PlanRepository:
             if error:
                 te[task_id] = error
             row.task_errors = te
-    
 
     @staticmethod
     async def get_by_id(session: AsyncSession, plan_id: UUID):
         result = await session.execute(select(ExecutionPlan).where(ExecutionPlan.id == plan_id))
         return result.scalars().first()
-
-    @staticmethod
-    async def create(session: AsyncSession, **kwargs):
-        plan = ExecutionPlan(**kwargs)
-        session.add(plan)
-        await session.commit()
-        await session.refresh(plan)
-        return plan
 
     @staticmethod
     async def get_all(session: AsyncSession, skip: int = 0, limit: int = 100):

@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.config import settings
+from app.core.config import settings
 from app.services.webhook_service import process_clerk_webhook, verify_clerk_signature
 
 logger = logging.getLogger(__name__)
