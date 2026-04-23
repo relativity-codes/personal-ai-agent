@@ -30,6 +30,7 @@ class AgentState(TypedDict):
     session_id: str
     user_input: str
     results: NotRequired[List[Any]]
+    chat_history: List[Dict[str, str]]
     
     # Intent Agent output
     validated_intent: Optional[Dict[str, Any]]

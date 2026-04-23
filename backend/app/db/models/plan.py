@@ -12,7 +12,7 @@ class ExecutionPlan(Base):
     session_id = Column(String(255), nullable=False, index=True)
     intent_type = Column(String(50), nullable=False)
     status = Column(String(20), default="pending")
-    tasks = Column(JSON, nullable=False)
+    tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan")
     task_status = Column(JSON, default=dict)
     task_results = Column(JSON, default=dict)
     task_errors = Column(JSON, default=dict)

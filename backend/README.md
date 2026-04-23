@@ -1,200 +1,97 @@
 # Backend
 
-FastAPI app for the personal AI agent. Run it with [uv](https://docs.astral.sh/uv/).
+This directory contains the FastAPI application that serves as the backend for the Personal AI Agent.
 
 ## Prerequisites
 
-- Python 3.11 or newer (see `.python-version`)
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) installed
+- Python 3.11 or newer
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (a fast Python package installer and resolver)
 
-## One-time setup
+## Getting Started
 
-From the `backend` directory:
+Follow these steps to get the backend running for local development.
+
+### 1. Set Up Virtual Environment
+
+Create and activate a virtual environment using `uv`:
 
 ```bash
-cd backend
+# From the backend/ directory
+uv venv
+```
+
+### 2. Install Dependencies
+
+Install the required Python packages:
+
+```bash
 uv sync
+```
+
+To install the development dependencies for running tests, use:
+
+```bash
+uv sync --all-groups
+```
+
+### 3. Configure Environment
+
+Copy the example environment file:
+
+```bash
 cp .env.example .env
 ```
 
-Edit `.env` as needed. List-style settings (`CORS_ORIGINS`, `ALLOWED_HOSTS`, `OPENROUTER_FALLBACK_MODELS`) use comma-separated values or a JSON array.
+Next, **edit the `.env` file** to configure the application. At a minimum, you must provide the connection string for your external PostgreSQL database:
 
-To install dev tools (pytest, etc.):
-
-```bash
-uv sync --all-groups
+```env
+DATABASE_URL="postgresql+asyncpg://user:password@host:port/dbname"
 ```
 
-## Run the API
+List-style settings like `CORS_ORIGINS` and `ALLOWED_HOSTS` can be a comma-separated string or a JSON array.
+
+### 4. Database Migrations
+
+With your database connection configured, apply the database migrations to set up the schema:
 
 ```bash
-cd backend
+uv run alembic upgrade head
+```
+
+## Running the Server
+
+To start the development server, run:
+
+```bash
+# From the backend/ directory
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The server listens on port **8000** by default.
+The API will be available at `http://localhost:8000`.
 
-- Health: `http://localhost:8000/health`
-- OpenAPI (Swagger): `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-- OpenAPI JSON: `http://localhost:8000/openapi.json`
+### API Endpoints
 
-## MCP tool APIs
+-   **Health Check:** `http://localhost:8000/health`
+-   **Swagger UI (API Docs):** `http://localhost:8000/docs`
+-   **ReDoc:** `http://localhost:8000/redoc`
 
-Authenticated routes (dev bypass uses a stub user when `DEV_AUTH_BYPASS=true`):
+## Running Tests
 
-- `GET /api/v1/mcp/servers` — registered integrations (GitHub, Notion, Calendar, Gmail) and `configured` flags.
-- `GET /api/v1/mcp/tools` — tool catalog per integration (JSON Schema `input_schema` on each tool).
-- `POST /api/v1/mcp/invoke` — body `{ "server_id": "github", "tool": "list_open_pull_requests", "arguments": { ... } }`.
-
-Secrets:
-
-- **GitHub:** `GITHUB_TOKEN` (PAT with `repo` or appropriate scopes for the repos you query).
-- **Notion:** `NOTION_TOKEN` (integration token; share databases/pages with the integration).
-- **Google Calendar & Gmail:** Google’s user APIs do **not** authenticate with client id + secret alone. Those identify your OAuth **client**. You still need a **user grant**, usually stored as **`GOOGLE_REFRESH_TOKEN`** (from OAuth consent with **offline** access). The app calls `https://oauth2.googleapis.com/token` with `client_id`, `client_secret`, and `refresh_token` to obtain a short-lived **access token** before each Calendar/Gmail request. Alternatively you can paste a static **`GOOGLE_CALENDAR_ACCESS_TOKEN`** and/or **`GMAIL_ACCESS_TOKEN`** (they override the minted token for that API only). Consent scopes must include Calendar and/or Gmail as needed (e.g. `https://www.googleapis.com/auth/calendar.readonly`, `https://www.googleapis.com/auth/gmail.readonly`).
-
-Copy-paste catalog: [samples/mcp_invoke_payloads.json](samples/mcp_invoke_payloads.json) — use a value under **`payloads`** as the **entire** JSON body (do not send `name` / `body` wrappers; those are only for documentation grouping).
-
-### Sample `POST /api/v1/mcp/invoke` payloads
-
-The request body must be exactly **`{ "server_id", "tool", "arguments" }`** at the top level (same shape as each entry under `payloads` in the JSON file). In **Swagger UI**, paste that object only, not the whole `mcp_invoke_payloads.json` file.
-
-Replace placeholders (`YOUR_*`, dates) and run with `curl` (omit `-H Authorization` when `DEV_AUTH_BYPASS=true`):
-
-**GitHub — list open pull requests**
-
-```json
-{
-  "server_id": "github",
-  "tool": "list_open_pull_requests",
-  "arguments": {
-    "owner": "octocat",
-    "repo": "Hello-World",
-    "state": "open"
-  }
-}
-```
-
-**GitHub — list commits**
-
-```json
-{
-  "server_id": "github",
-  "tool": "list_commits",
-  "arguments": {
-    "owner": "octocat",
-    "repo": "Hello-World",
-    "sha": "HEAD",
-    "per_page": 10
-  }
-}
-```
-
-**Notion — query database**
-
-```json
-{
-  "server_id": "notion",
-  "tool": "query_database",
-  "arguments": {
-    "database_id": "YOUR_DATABASE_UUID",
-    "page_size": 10
-  }
-}
-```
-
-**Notion — create page (parent must match your workspace schema)**
-
-```json
-{
-  "server_id": "notion",
-  "tool": "create_page",
-  "arguments": {
-    "parent_id": "YOUR_PARENT_PAGE_UUID",
-    "title": "Standup agenda",
-    "parent_type": "page_id"
-  }
-}
-```
-
-**Calendar — list events (needs `GOOGLE_CALENDAR_ACCESS_TOKEN`; RFC3339 times)**
-
-```json
-{
-  "server_id": "calendar",
-  "tool": "list_events",
-  "arguments": {
-    "time_min": "2026-04-22T00:00:00Z",
-    "time_max": "2026-04-29T23:59:59Z",
-    "max_results": 20
-  }
-}
-```
-
-**Calendar — detect overlaps (no Google token; local helper)**
-
-```json
-{
-  "server_id": "calendar",
-  "tool": "detect_overlaps",
-  "arguments": {
-    "events": [
-      { "summary": "Meeting A", "start": "2026-04-22T14:00:00Z", "end": "2026-04-22T15:00:00Z" },
-      { "summary": "Meeting B", "start": "2026-04-22T14:30:00Z", "end": "2026-04-22T15:30:00Z" }
-    ]
-  }
-}
-```
-
-**Gmail — list threads (v1.1 stub unless `GMAIL_ACCESS_TOKEN` is wired)**
-
-```json
-{
-  "server_id": "gmail",
-  "tool": "list_threads",
-  "arguments": {
-    "query": "is:unread",
-    "max_results": 10
-  }
-}
-```
-
-**curl example (GitHub PRs)**
+To run the test suite, use `pytest`:
 
 ```bash
-curl -s -X POST http://localhost:8000/api/v1/mcp/invoke \
-  -H "Content-Type: application/json" \
-  -d '{"server_id":"github","tool":"list_open_pull_requests","arguments":{"owner":"octocat","repo":"Hello-World","state":"open"}}'
-```
-
-## Tests
-
-```bash
-cd backend
-uv sync --all-groups
+# Ensure dev dependencies are installed (uv sync --all-groups)
 uv run pytest
 ```
 
-Tests load **`backend/.env`** (same as the app). **`tests/integration/test_mcp_live_env.py`** calls real GitHub, Notion, and Google Calendar APIs when the matching variables are set; otherwise those cases **`skip`** with a short reason. Optional: `GITHUB_TEST_OWNER`, `GITHUB_TEST_REPO`, `NOTION_TEST_DATABASE_ID` tune live targets. Run only live-marked tests: `uv run pytest -m live`.
+Tests will use the configuration from your `.env` file. Integration tests that call external services (like GitHub or Notion) will be skipped unless you provide the necessary API keys in your `.env` file. To run only the live-marked tests, use: `uv run pytest -m live`.
 
-## Frontend (Next.js)
+## MCP Tool APIs
 
-The web app lives in `../frontend`. In a separate terminal:
+The MCP (Multi-tool Control Protocol) system allows the agent to interact with external tools and services.
 
-```bash
-cd ../frontend
-cp .env.example .env.local
-yarn install
-yarn dev
-```
+-   `GET /api/v1/mcp/servers`: Lists registered integrations (e.g., GitHub, Notion) and their configuration status.
+-   `GET /api/v1/mcp/tools`: Provides a catalog of available tools for each integration.
+-   `POST /api/v1/mcp/invoke`: Executes a specific tool with the given arguments.
 
-Then open `http://localhost:3000`. Set `NEXT_PUBLIC_API_URL` in `.env.local` if the API is not on `http://localhost:8000`.
-
-## Database migrations (optional)
-
-When you add SQLAlchemy models and Alembic revisions:
-
-```bash
-cd backend
-uv run alembic upgrade head
-```
+For detailed instructions on using these endpoints and configuring secrets for services like GitHub, Notion, and Google, refer to the sample payloads in `samples/mcp_invoke_payloads.json`.

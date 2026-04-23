@@ -7,24 +7,33 @@ import re
 from app.agents.state import AgentState
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import INTENT_CLASSIFIER_PROMPT, INTENT_VALIDATOR_PROMPT
+from app.db.repositories.user_repository import UserRepository
+from app.db.repositories.audit_repository import AuditRepository
 
 class IntentAgent:
     """
     Intent Agent: Classifies and validates user input.
     """
-    
-    def __init__(self, openrouter_client: OpenRouterClient):
+
+    def __init__(self, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
         self.openrouter = openrouter_client
-    
+        self.user_repo = user_repo
+        self.audit_repo = audit_repo
+
     async def classify_intent(self, state: AgentState) -> AgentState:
         """
         Classify user input into structured intent.
         """
         user_input = state["user_input"]
-        
+        chat_history = state.get("chat_history", [])
+
         # Prepare prompt with context
         prompt = INTENT_CLASSIFIER_PROMPT.replace("{{current_date}}", "2026-04-21")
         
+        # Format chat history for the prompt
+        formatted_history = "\n".join([f'{msg["role"]}: {msg["message"]}' for msg in chat_history])
+        prompt = f'{prompt}\n\nConversation History:\n{formatted_history}'
+
         response = await self.openrouter.complete(
             messages=[
                 {"role": "system", "content": prompt},
@@ -33,37 +42,37 @@ class IntentAgent:
             temperature=0.2,
             max_tokens=500
         )
-        
+
         content = response["choices"][0]["message"]["content"]
-        
+
         # Extract JSON
         json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
         if json_match:
             content = json_match.group(1)
-        
+
         try:
             intent_data = json.loads(content)
             state["validated_intent"] = intent_data
             state["intent_confidence"] = intent_data.get("confidence", 0.5)
             # Set the threshold for clarification
-            state["needs_clarification"] = intent_data.get("confidence", 1.0) < 0.8 
+            state["needs_clarification"] = intent_data.get("confidence", 1.0) < 0.8
         except (json.JSONDecodeError, AttributeError):
             # Handle cases where the model returns invalid JSON or no confidence
             state["validated_intent"] = {}
             state["intent_confidence"] = 0.0
             state["needs_clarification"] = True
-        
+
         return state
-    
+
     async def validate_intent(self, state: AgentState) -> AgentState:
         """
         If confidence is low, use the validator prompt to generate a clarifying question.
         """
         if not state.get("needs_clarification"):
             return state
-        
+
         user_input = state["user_input"]
-        
+
         # Prepare prompt for the validator
         prompt = INTENT_VALIDATOR_PROMPT
 
@@ -77,24 +86,36 @@ class IntentAgent:
         )
 
         content = response["choices"][0]["message"]["content"]
-        
+
         # The validator prompt is expected to return a JSON object with a "clarification_question" key.
         json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
         if json_match:
             content = json_match.group(1)
-        
+
         try:
             validation_data = json.loads(content)
             question = validation_data.get("clarification_question", "I'm sorry, I don't understand. Could you please rephrase?")
             state["clarification_question"] = question
         except (json.JSONDecodeError, AttributeError):
             state["clarification_question"] = "I'm sorry, I'm having trouble understanding. Could you explain in a different way?"
-            
+
         return state
 
-def create_intent_workflow(openrouter_client: OpenRouterClient) -> StateGraph:
+def create_intent_node(openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
+    """Creates the intent agent node."""
+    intent_agent = IntentAgent(openrouter_client, user_repo, audit_repo)
+
+    async def intent_node(state: AgentState) -> AgentState:
+        state = await intent_agent.classify_intent(state)
+        if state.get("needs_clarification"):
+            state = await intent_agent.validate_intent(state)
+        return state
+
+    return intent_node
+
+def create_intent_workflow(openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository) -> StateGraph:
     """Creates the intent workflow."""
-    intent_agent = IntentAgent(openrouter_client)
+    intent_agent = IntentAgent(openrouter_client, user_repo, audit_repo)
 
     workflow = StateGraph(AgentState)
     workflow.add_node("classify_intent", intent_agent.classify_intent)
@@ -107,5 +128,5 @@ def create_intent_workflow(openrouter_client: OpenRouterClient) -> StateGraph:
         lambda state: "validate_intent" if state.get("needs_clarification") else END,
     )
     workflow.add_edge("validate_intent", END)
-    
+
     return workflow.compile()
