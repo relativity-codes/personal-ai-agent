@@ -58,6 +58,28 @@ With your database connection configured, apply the database migrations to set u
 uv run alembic upgrade head
 ```
 
+## Running the Server with a single command
+
+To simplify the process of getting the backend running, you can use the `start_backend.sh` script. This script will:
+
+1.  Create a virtual environment.
+2.  Set up environment variables.
+3.  Install dependencies.
+4.  Run database migrations.
+5.  Start the development server.
+
+To run the script, first make it executable:
+
+```bash
+chmod +x start_backend.sh
+```
+
+Then, execute the script:
+
+```bash
+./start_backend.sh
+```
+
 ## Running the Server
 
 To start the development server, run:
