@@ -1,7 +1,13 @@
-from typing import TypedDict, List, Dict, Any, Optional, Annotated, NotRequired
+import operator
+from typing import TypedDict, List, Dict, Any, Optional, Annotated, NotRequired, Callable
 from dataclasses import dataclass
 from enum import Enum
-import operator
+
+def dict_merge(a: dict, b: dict) -> dict:
+    """Reducer that merges two dicts (b into a)."""
+    merged = dict(a)
+    merged.update(b)
+    return merged
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
@@ -48,7 +54,7 @@ class AgentState(TypedDict):
     current_task_index: int
     completed_tasks: Annotated[List[str], operator.add]
     failed_tasks: Annotated[List[Dict], operator.add]
-    task_results: Annotated[Dict[str, Any], operator.setitem]
+    task_results: Annotated[Dict[str, Any], dict_merge]
     
     # Final output
     final_response: Optional[str]
