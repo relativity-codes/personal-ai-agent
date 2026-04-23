@@ -1,3 +1,4 @@
+import os
 import json
 from typing import Optional
 
@@ -20,15 +21,15 @@ def _parse_env_list(value: str, fallback: list[str]) -> list[str]:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
-    APP_NAME: str = "Personal AI Agent"
-    APP_ENV: str = "development"
-    DEBUG: bool = True
-    DEV_AUTH_BYPASS: bool = True
+    APP_NAME: str = config("APP_NAME", default="Personal AI Agent")
+    APP_ENV: str = config("APP_ENV", default="development")
+    DEBUG: bool = config("DEBUG", default=True, cast=bool)
+    DEV_AUTH_BYPASS: bool = config("DEV_AUTH_BYPASS", default=True, cast=bool)
     # Stable UUID string for the seeded dev user (see app.db.session._ensure_dev_user_row).
-    DEV_USER_INTERNAL_ID: str = "11111111-1111-1111-1111-111111111111"
+    DEV_USER_INTERNAL_ID: str = config("DEV_USER_INTERNAL_ID", default="11111111-1111-1111-1111-111111111111")
 
-    CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8000")
-    ALLOWED_HOSTS: str = Field(default="localhost,127.0.0.1,test,*")
+    CORS_ORIGINS: str = config("CORS_ORIGINS", default="http://localhost:3000,http://localhost:8000")
+    ALLOWED_HOSTS: str = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,test,*")
 
     POSTGRES_HOST: str = config("POSTGRES_HOST")
     POSTGRES_PORT: int = config("POSTGRES_PORT")
@@ -36,17 +37,41 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD")
     POSTGRES_DB: str = config("POSTGRES_DB")
 
+
+    POSTGRES_SSL_MODE: Optional[str] = config("POSTGRES_SSL_MODE", default=None)
+    _POSTGRES_SSL_ROOT_CERT: Optional[str] = config("POSTGRES_SSL_ROOT_CERT", default=None)
+
+    @property
+    def POSTGRES_SSL_ROOT_CERT(self) -> Optional[str]:
+        if not self._POSTGRES_SSL_ROOT_CERT:
+            return None
+        # If the path is already absolute, return as is
+        if os.path.isabs(self._POSTGRES_SSL_ROOT_CERT):
+            return self._POSTGRES_SSL_ROOT_CERT
+        # Otherwise, make it relative to the backend root
+        backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(backend_root, self._POSTGRES_SSL_ROOT_CERT)
+
     @property
     def DATABASE_URL(self) -> str:
-        return (
+        url = (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+        params = []
+        if self.POSTGRES_SSL_MODE:
+            params.append(f"sslmode={self.POSTGRES_SSL_MODE}")
+        ssl_cert = self.POSTGRES_SSL_ROOT_CERT
+        if ssl_cert:
+            params.append(f"sslrootcert={ssl_cert}")
+        if params:
+            url += "?" + "&".join(params)
+        return url
 
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_PASSWORD: Optional[str] = None
-    REDIS_DB: int = 0
+    REDIS_HOST: str = config("REDIS_HOST", default="localhost")
+    REDIS_PORT: int = config("REDIS_PORT", default=6379, cast=int)
+    REDIS_PASSWORD: Optional[str] = config("REDIS_PASSWORD", default=None)
+    REDIS_DB: int = config("REDIS_DB", default=0, cast=int)
 
     @property
     def REDIS_URL(self) -> str:
@@ -54,12 +79,10 @@ class Settings(BaseSettings):
             return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
-    OPENROUTER_API_KEY: str = ""
-    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_DEFAULT_MODEL: str = "anthropic/claude-3.5-sonnet"
-    OPENROUTER_FALLBACK_MODELS: str = Field(
-        default="openai/gpt-4o,meta-llama/llama-3-70b-instruct",
-    )
+    OPENROUTER_API_KEY: str = config("OPENROUTER_API_KEY", default="")
+    OPENROUTER_BASE_URL: str = config("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
+    OPENROUTER_DEFAULT_MODEL: str = config("OPENROUTER_DEFAULT_MODEL", default="anthropic/claude-3.5-sonnet")
+    OPENROUTER_FALLBACK_MODELS: str = config("OPENROUTER_FALLBACK_MODELS", default="openai/gpt-4o,meta-llama/llama-3-70b-instruct")
 
     @computed_field
     @property
@@ -82,43 +105,38 @@ class Settings(BaseSettings):
             ["openai/gpt-4o", "meta-llama/llama-3-70b-instruct"],
         )
 
-    CLERK_SECRET_KEY: str = ""
-    CLERK_PUBLISHABLE_KEY: str = ""
-    CLERK_WEBHOOK_SECRET: str = ""
+    CLERK_SECRET_KEY: str = config("CLERK_SECRET_KEY", default="")
+    CLERK_PUBLISHABLE_KEY: str = config("CLERK_PUBLISHABLE_KEY", default="")
+    CLERK_WEBHOOK_SECRET: str = config("CLERK_WEBHOOK_SECRET", default="")
     # Clerk session JWT issuer, e.g. https://your-instance.clerk.accounts.dev
-    CLERK_ISSUER: str = ""
+    CLERK_ISSUER: str = config("CLERK_ISSUER", default="")
 
-    GITHUB_CLIENT_ID: Optional[str] = None
-    GITHUB_CLIENT_SECRET: Optional[str] = None
-    GITHUB_TOKEN: str = ""
+    GITHUB_CLIENT_ID: Optional[str] = config("GITHUB_CLIENT_ID", default=None)
+    GITHUB_CLIENT_SECRET: Optional[str] = config("GITHUB_CLIENT_SECRET", default=None)
+    GITHUB_TOKEN: str = config("GITHUB_TOKEN", default="")
 
-    NOTION_CLIENT_ID: Optional[str] = None
-    NOTION_CLIENT_SECRET: Optional[str] = None
-    NOTION_TOKEN: str = ""
+    NOTION_CLIENT_ID: Optional[str] = config("NOTION_CLIENT_ID", default=None)
+    NOTION_CLIENT_SECRET: Optional[str] = config("NOTION_CLIENT_SECRET", default=None)
+    NOTION_TOKEN: str = config("NOTION_TOKEN", default="")
 
-    GOOGLE_CLIENT_ID: Optional[str] = None
-    GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REFRESH_TOKEN: str = ""
-    GOOGLE_CALENDAR_ACCESS_TOKEN: str = ""
+    GOOGLE_CLIENT_ID: Optional[str] = config("GOOGLE_CLIENT_ID", default=None)
+    GOOGLE_CLIENT_SECRET: Optional[str] = config("GOOGLE_CLIENT_SECRET", default=None)
+    GOOGLE_REFRESH_TOKEN: str = config("GOOGLE_REFRESH_TOKEN", default="")
+    GOOGLE_CALENDAR_ACCESS_TOKEN: str = config("GOOGLE_CALENDAR_ACCESS_TOKEN", default="")
 
-    GMAIL_ACCESS_TOKEN: str = ""
+    GMAIL_ACCESS_TOKEN: str = config("GMAIL_ACCESS_TOKEN", default="")
 
-    GOOGLE_OAUTH_SCOPES: str = Field(
-        default=(
-            "https://www.googleapis.com/auth/calendar.readonly "
-            "https://www.googleapis.com/auth/gmail.readonly"
-        ),
-    )
+    GOOGLE_OAUTH_SCOPES: str = config("GOOGLE_OAUTH_SCOPES", default="https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly")
 
-    GITHUB_TEST_OWNER: str = "octocat"
-    GITHUB_TEST_REPO: str = "Hello-World"
-    NOTION_TEST_DATABASE_ID: str = ""
+    GITHUB_TEST_OWNER: str = config("GITHUB_TEST_OWNER", default="octocat")
+    GITHUB_TEST_REPO: str = config("GITHUB_TEST_REPO", default="Hello-World")
+    NOTION_TEST_DATABASE_ID: str = config("NOTION_TEST_DATABASE_ID", default="")
 
-    RATE_LIMIT_REQUESTS: int = 100
-    RATE_LIMIT_PERIOD: int = 60
-    MAX_TASKS_PER_REQUEST: int = 10
-    TASK_TIMEOUT_SECONDS: int = 30
-    MAX_EXECUTION_ITERATIONS: int = 50
+    RATE_LIMIT_REQUESTS: int = config("RATE_LIMIT_REQUESTS", default=100, cast=int)
+    RATE_LIMIT_PERIOD: int = config("RATE_LIMIT_PERIOD", default=60, cast=int)
+    MAX_TASKS_PER_REQUEST: int = config("MAX_TASKS_PER_REQUEST", default=10, cast=int)
+    TASK_TIMEOUT_SECONDS: int = config("TASK_TIMEOUT_SECONDS", default=30, cast=int)
+    MAX_EXECUTION_ITERATIONS: int = config("MAX_EXECUTION_ITERATIONS", default=50, cast=int)
 
 
 settings = Settings()
