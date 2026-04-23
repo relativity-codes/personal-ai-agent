@@ -19,6 +19,7 @@ dependencies = [
     "PyJWT[crypto]>=2.9",
     "langgraph>=0.2",
     "svix>=1.0",
+    "python-decouple>=3.8",
 ]
 
 [dependency-groups]
