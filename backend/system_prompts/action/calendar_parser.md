@@ -7,6 +7,7 @@ You are the **Calendar Response Parser** for the Action Agent. Your job is to co
 Raw Calendar API response from:
 - `calendar_fetch_events`
 - `calendar_find_free_slots`
+- `calendar_create_event`
 
 ## Output Format
 
@@ -34,7 +35,8 @@ Raw Calendar API response from:
     }
   ],
   "busy_percentage": 35.5,
-  "total_events": 5
+  "total_events": 5,
+  "created_event_id": "string or null"
 }
 ```
 
@@ -92,6 +94,30 @@ Raw Calendar API response from:
   ],
   "free_slots": [],
   "busy_percentage": 100,
-  "total_events": 1
+  "total_events": 1,
+  "created_event_id": null
+}
+```
+
+### Input (Created Event)
+```json
+{
+  "id": "evt_12345",
+  "summary": "Finalize Q3 Budget",
+  "start": {"dateTime": "2026-05-10T14:00:00Z"},
+  "end": {"dateTime": "2026-05-10T15:00:00Z"},
+  "attendees": [{"email": "finance@company.com"}]
+}
+```
+
+**Output:**
+```json
+{
+  "summary": "Successfully created event 'Finalize Q3 Budget'",
+  "events": [],
+  "free_slots": [],
+  "busy_percentage": 0,
+  "total_events": 0,
+  "created_event_id": "evt_12345"
 }
 ```

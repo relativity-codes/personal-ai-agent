@@ -20,7 +20,10 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 async def init_db():
-    pass
+    from app.db.models import Base  # ✅ must import Base that has your models
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
+        
 async def close_db():
     await engine.dispose()
