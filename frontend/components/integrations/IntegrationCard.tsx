@@ -64,15 +64,15 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
             <div className="text-sm text-zinc-700 dark:text-zinc-200">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span className="font-medium text-zinc-900 dark:text-zinc-50">Status</span>
-                <ConnectionStatusBadge connected={model.connected} />
+                <ConnectionStatusBadge configured={model.configured} />
               </div>
-              {model.connected && statusDetail ? (
+              {model.configured && statusDetail ? (
                 <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{statusDetail}</p>
               ) : null}
             </div>
           </div>
 
-          {model.connected && model.permissionsLabel ? (
+          {model.configured && model.permissionsLabel ? (
             <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
               <span className="font-medium text-zinc-800 dark:text-zinc-100">Permissions: </span>
               {model.permissionsLabel}
@@ -101,7 +101,7 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
         ) : null}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          {model.connected ? (
+          {model.configured ? (
             <>
               <ConfigureButton onClick={() => onConfigure(model)} disabled={busy !== null} />
               <DisconnectButton onClick={() => void handleDisconnect()} busy={busy === "disconnect"} />

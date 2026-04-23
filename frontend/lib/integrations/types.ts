@@ -1,8 +1,10 @@
 export type IntegrationId = "github" | "notion" | "calendar" | "gmail";
 
 export type McpServerDTO = {
+  /** Stable server id from the API (e.g. `github`). Prefer this for matching. */
+  id?: string;
   name: string;
-  connected: boolean;
+  configured: boolean;
   last_sync?: string;
   /** Optional account/workspace label when backend provides it */
   account_label?: string;
@@ -18,14 +20,14 @@ export type IntegrationDefinition = {
   id: IntegrationId;
   title: string;
   description: string;
-  /** Shown when connected if API does not return account_label */
-  connectedExampleLabel: string;
-  /** Shown when connected if API does not return permissions */
+  /** Shown when configured if API does not return account_label */
+  configuredStatusHint: string;
+  /** Shown when configured if API does not return permissions */
   defaultPermissionsLabel?: string;
 };
 
 export type IntegrationViewModel = IntegrationDefinition & {
-  connected: boolean;
+  configured: boolean;
   lastSync?: string;
   accountLabel?: string;
   permissionsLabel?: string;

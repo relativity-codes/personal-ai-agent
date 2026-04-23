@@ -84,7 +84,7 @@ export function ConfigureModal({ integration, open, onClose }: Props) {
               Notes
               <textarea
                 className="mt-2 min-h-[96px] w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none ring-zinc-900/10 placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10 dark:focus:border-zinc-500"
-                placeholder="Optional context for your team (stored when API is connected)"
+                placeholder="Optional context for your team (stored when the integration is configured)"
                 defaultValue=""
               />
             </label>

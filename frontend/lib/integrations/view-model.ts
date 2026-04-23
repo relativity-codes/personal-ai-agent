@@ -15,21 +15,29 @@ function resolveIntegrationId(raw: string): IntegrationId | undefined {
   return ID_ALIASES[key];
 }
 
+function resolveServerToIntegrationId(server: McpServerDTO): IntegrationId | undefined {
+  const fromApiId = server.id?.trim().toLowerCase();
+  if (fromApiId === "github" || fromApiId === "notion" || fromApiId === "calendar" || fromApiId === "gmail") {
+    return fromApiId;
+  }
+  return resolveIntegrationId(server.name);
+}
+
 export function getIntegrationStatusDetail(vm: IntegrationViewModel): string | undefined {
-  if (!vm.connected) return undefined;
+  if (!vm.configured) return undefined;
   if (vm.accountLabel) {
-    if (vm.id === "github") return `Connected as ${vm.accountLabel}`;
-    if (vm.id === "notion") return `Connected to "${vm.accountLabel}"`;
+    if (vm.id === "github") return `Configured as ${vm.accountLabel}`;
+    if (vm.id === "notion") return `Configured for "${vm.accountLabel}"`;
     return vm.accountLabel;
   }
-  return vm.connectedExampleLabel;
+  return vm.configuredStatusHint;
 }
 
 export function mergeServersIntoDefinitions(servers: McpServerDTO[]): IntegrationViewModel[] {
   const byId = new Map<IntegrationId, McpServerDTO>();
 
   for (const server of servers) {
-    const id = resolveIntegrationId(server.name);
+    const id = resolveServerToIntegrationId(server);
     if (id) byId.set(id, server);
   }
 
@@ -37,7 +45,7 @@ export function mergeServersIntoDefinitions(servers: McpServerDTO[]): Integratio
     const match = byId.get(def.id);
     return {
       ...def,
-      connected: match?.connected ?? false,
+      configured: match?.configured ?? false,
       lastSync: match?.last_sync,
       accountLabel: match?.account_label,
       permissionsLabel: match?.permissions ?? def.defaultPermissionsLabel,
