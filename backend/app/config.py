@@ -18,12 +18,14 @@ def _parse_env_list(value: str, fallback: list[str]) -> list[str]:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
     APP_NAME: str = "Personal AI Agent"
     APP_ENV: str = "development"
     DEBUG: bool = True
     DEV_AUTH_BYPASS: bool = True
+    # Stable UUID string for the seeded dev user (see app.db.session._ensure_dev_user_row).
+    DEV_USER_INTERNAL_ID: str = "11111111-1111-1111-1111-111111111111"
 
     CORS_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:8000")
     ALLOWED_HOSTS: str = Field(default="localhost,127.0.0.1,test,*")
@@ -83,6 +85,8 @@ class Settings(BaseSettings):
     CLERK_SECRET_KEY: str = ""
     CLERK_PUBLISHABLE_KEY: str = ""
     CLERK_WEBHOOK_SECRET: str = ""
+    # Clerk session JWT issuer, e.g. https://your-instance.clerk.accounts.dev
+    CLERK_ISSUER: str = ""
 
     GITHUB_CLIENT_ID: Optional[str] = None
     GITHUB_CLIENT_SECRET: Optional[str] = None

@@ -9,7 +9,7 @@ from app.agents.action_agent import create_action_node
 from app.agents.response_agent import create_response_node # Import the new response node
 from app.core.openrouter import OpenRouterClient
 from app.db.repositories.plan_repository import PlanRepository
-from app.services.mcp_registry import mcp_registry
+from app.mcp.registry import mcp_registry
 
 def should_continue(state: AgentState) -> Literal["task_planner", "action", "response", END]:
     """
