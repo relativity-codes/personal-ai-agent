@@ -10,6 +10,7 @@ from app.agents.state import AgentState
 from app.db.repositories.chat_history_repository import ChatHistoryRepository
 from app.db.repositories.session_repository import SessionRepository
 from langgraph.graph import StateGraph
+from app.core.config import settings
 
 class ChatRequest(BaseModel):
     message: str
@@ -52,12 +53,28 @@ async def chat(
     chat_history = await chat_history_repo.get_history(str(session_id))
 
     initial_state: AgentState = {
+        "user_id": user_id,
+        "clerk_sub": user.get("clerk_sub", user_id),
         "user_input": request.message,
         "session_id": str(session_id),
         "chat_history": chat_history,
-        "results": [],
-        "tasks": [],
         "needs_clarification": False,
+        "validated_intent": None,
+        "intent_confidence": 0.0,
+        "clarification_question": None,
+        "plan_id": None,
+        "tasks": [],
+        "task_status": {},
+        "execution_order": [],
+        "current_task_index": 0,
+        "completed_tasks": [],
+        "failed_tasks": [],
+        "task_results": {},
+        "final_response": None,
+        "error": None,
+        "iteration": 0,
+        "max_iterations": settings.MAX_EXECUTION_ITERATIONS,
+        "results": [],
     }
 
     try:

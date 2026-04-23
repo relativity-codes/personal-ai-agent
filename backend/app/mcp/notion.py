@@ -22,6 +22,8 @@ def normalize_notion_resource_id(raw: str) -> str:
     """Return a hyphenated UUID string accepted by the Notion API."""
     s = (raw or "").strip()
     s = s.split("?")[0].split("#")[0].rstrip("/")
+    while len(s) >= 2 and s[0] == s[-1] == '"':
+        s = s[1:-1].strip()
     try:
         return str(uuid.UUID(s))
     except ValueError:
@@ -31,12 +33,50 @@ def normalize_notion_resource_id(raw: str) -> str:
         raise ValueError("Notion ID is not a valid UUID or 32-hex string.")
     return str(uuid.UUID(m.group(1).lower()))
 
-def _notion_upstream_error(response: httpx.Response, *, tool_name: str) -> dict[str, Any]:
-    logger.warning(f"Notion HTTP error on {tool_name}: {response.status_code} {response.text[:500]}")
-    return {
-        "ok": False, "error": "upstream_error",
-        "status_code": response.status_code, "message": response.text[:2000],
+
+def _notion_error_hint(
+    response: httpx.Response,
+    *,
+    tool_name: str,
+    parent_type: str | None,
+) -> str | None:
+    try:
+        body = response.json()
+    except Exception:
+        return None
+    msg = str(body.get("message") or "")
+    code = str(body.get("code") or "")
+    if tool_name == "create_page" and response.status_code == 404:
+        if "object_not_found" in code or "could not find" in msg.lower():
+            return (
+                "In Notion: open the parent page or database → ⋮ or ⋯ → Connections → add this integration. "
+                "If you used parent_type \"page_id\", confirm the ID is a page; use \"database_id\" for database parents."
+            )
+    if response.status_code == 400 and "page, not a database" in msg.lower():
+        if parent_type == "database_id":
+            return (
+                "The ID is a page, not a database. Retry with parent_type \"page_id\" or use the database's ID as parent_id."
+            )
+    return None
+
+
+def _notion_upstream_error(
+    response: httpx.Response,
+    *,
+    tool_name: str,
+    parent_type: str | None = None,
+) -> dict[str, Any]:
+    logger.warning("Notion HTTP error on %s: %s %s", tool_name, response.status_code, response.text[:500])
+    out: dict[str, Any] = {
+        "ok": False,
+        "error": "upstream_error",
+        "status_code": response.status_code,
+        "message": response.text[:2000],
     }
+    hint = _notion_error_hint(response, tool_name=tool_name, parent_type=parent_type)
+    if hint:
+        out["hint"] = hint
+    return out
 
 
 class NotionMCPServer(MCPServer):
@@ -149,7 +189,10 @@ class NotionMCPServer(MCPServer):
                 return {"ok": True, "data": r.json()}
 
         except httpx.HTTPStatusError as exc:
-            return _notion_upstream_error(exc.response, tool_name=tool_name)
+            parent_type = args.get("parent_type") if tool_name == "create_page" else None
+            return _notion_upstream_error(
+                exc.response, tool_name=tool_name, parent_type=parent_type
+            )
         except (httpx.RequestError, ValueError) as exc:
             logger.exception(f"Notion {tool_name} failed")
             return {"ok": False, "error": "request_error", "message": str(exc)}

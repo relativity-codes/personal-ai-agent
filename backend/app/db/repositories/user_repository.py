@@ -1,20 +1,30 @@
-from app.db.models.user import User
+from __future__ import annotations
+
+import uuid
+from typing import Any
+
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import update, delete
 from uuid import UUID
+
+from app.db.models.user import User
 
 class UserRepository:
     @staticmethod
-    async def get_by_clerk_id(session: AsyncSession, clerk_id: str):
+    async def get_by_id(session: AsyncSession, user_id: UUID) -> User | None:
+        result = await session.execute(select(User).where(User.id == user_id))
+        return result.scalars().first()
+
+    @staticmethod
+    async def get_by_clerk_id(session: AsyncSession, clerk_id: str) -> User | None:
         result = await session.execute(select(User).where(User.clerk_id == clerk_id))
         return result.scalars().first()
 
     @staticmethod
-    async def create(session: AsyncSession, **kwargs):
+    async def create(session: AsyncSession, **kwargs: Any) -> User:
         user = User(**kwargs)
         session.add(user)
-        await session.commit()
+        await session.flush()
         await session.refresh(user)
         return user
 
@@ -41,11 +51,6 @@ class UserRepository:
     async def get_all(session: AsyncSession, skip: int = 0, limit: int = 100):
         result = await session.execute(select(User).offset(skip).limit(limit))
         return result.scalars().all()
-
-    @staticmethod
-    async def get_by_id(session: AsyncSession, user_id: UUID):
-        result = await session.execute(select(User).where(User.id == user_id))
-        return result.scalars().first()
 
     @staticmethod
     async def delete_by_id(session: AsyncSession, user_id: UUID) -> bool:

@@ -17,5 +17,5 @@ class AuditLog(Base):
     error_message = Column(String(500))
     execution_time_ms = Column(Integer)
     tokens_used = Column(Integer)
-    metadata = Column(JSON, default=dict)
+    event_metadata = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

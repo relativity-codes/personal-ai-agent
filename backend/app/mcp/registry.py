@@ -13,6 +13,23 @@ from app.mcp.notion import NotionMCPServer
 logger = logging.getLogger(__name__)
 
 
+class _UserBoundMCPClient:
+    """LangGraph action node: ``execute`` → ``MCPServer.invoke`` (no per-user vault in this build)."""
+
+    def __init__(self, service: MCPRegistryService, server_id: str, user_id: str) -> None:
+        self._service = service
+        self._server_id = server_id
+        self._user_id = user_id
+
+    async def execute(self, tool: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        _ = self._user_id
+        server = self._service.get(self._server_id)
+        if server is None:
+            raise ValueError(f"Unknown MCP server_id: {self._server_id!r}")
+        raw = await server.invoke(tool, parameters, None)
+        return raw if isinstance(raw, dict) else {"value": raw}
+
+
 class MCPRegistryService:
     def __init__(self) -> None:
         self._servers: dict[str, MCPServer] = {}
@@ -34,6 +51,9 @@ class MCPRegistryService:
 
     def get(self, server_id: str) -> MCPServer | None:
         return self._servers.get(server_id)
+
+    def get_client(self, server_id: str, user_id: str) -> _UserBoundMCPClient:
+        return _UserBoundMCPClient(self, server_id, user_id)
 
     def list_servers(self) -> list[dict[str, Any]]:
         return [
