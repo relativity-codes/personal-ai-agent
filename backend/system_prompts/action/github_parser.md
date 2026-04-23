@@ -9,6 +9,7 @@ Raw GitHub API response (JSON) from one of these tools:
 - `github_get_pr_details`
 - `github_list_commits`
 - `github_summarize_pr`
+- `github_create_issue`
 
 ## Output Format
 
@@ -40,6 +41,11 @@ Return a JSON object with extracted, summarized data:
       "date": "ISO date"
     }
   ],
+  "created_issue": {
+    "number": 45,
+    "title": "Bug report: Login fails",
+    "url": "https://github.com/repo/issues/45"
+  },
   "total_count": 5,
   "needs_review_count": 2,
   "ready_to_merge_count": 1
@@ -98,49 +104,37 @@ Return a JSON object with extracted, summarized data:
       "updated_at": null
     }
   ],
+  "commits": [],
+  "created_issue": null,
   "total_count": 1,
   "needs_review_count": 1,
   "ready_to_merge_count": 0
 }
 ```
 
-### Input (PR Details Response)
+### Input (Create Issue Response)
 ```json
 {
-  "number": 245,
-  "title": "Implement MCP server architecture",
-  "body": "This PR adds MCP server support for GitHub and Notion...",
-  "user": {"login": "alice"},
-  "state": "open",
-  "additions": 450,
-  "deletions": 120,
-  "changed_files": 23,
-  "html_url": "https://github.com/repo/pull/245"
+  "number": 45,
+  "title": "Bug report: Login fails on Safari",
+  "html_url": "https://github.com/my-org/my-repo/issues/45",
+  "state": "open"
 }
 ```
 
 **Output:**
 ```json
 {
-  "summary": "PR #245 has 450 additions and 120 deletions across 23 files",
-  "prs": [
-    {
-      "number": 245,
-      "title": "Implement MCP server architecture",
-      "author": "alice",
-      "status": "open",
-      "review_status": "pending",
-      "additions": 450,
-      "deletions": 120,
-      "changed_files": 23,
-      "url": "https://github.com/repo/pull/245",
-      "created_at": null,
-      "updated_at": null
-    }
-  ],
+  "summary": "Successfully created issue #45: 'Bug report: Login fails on Safari'",
+  "prs": [],
   "commits": [],
-  "total_count": 1,
-  "needs_review_count": 1,
+  "created_issue": {
+    "number": 45,
+    "title": "Bug report: Login fails on Safari",
+    "url": "https://github.com/my-org/my-repo/issues/45"
+  },
+  "total_count": 0,
+  "needs_review_count": 0,
   "ready_to_merge_count": 0
 }
 ```
