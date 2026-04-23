@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SETTINGS_NAV_ITEMS } from "./nav-config";
-import { SettingsTopBar } from "./SettingsTopBar";
 
 type Props = {
   children: React.ReactNode;
@@ -13,10 +12,7 @@ export function SettingsAppShell({ children }: Props) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-      <SettingsTopBar />
-
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <nav
             className="lg:w-64 lg:shrink-0"
@@ -54,6 +50,5 @@ export function SettingsAppShell({ children }: Props) {
           <main className="min-w-0 flex-1 space-y-6">{children}</main>
         </div>
       </div>
-    </div>
   );
 }

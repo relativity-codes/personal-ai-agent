@@ -5,10 +5,10 @@ import { fetchMcpServers } from "@/lib/integrations/api";
 import { DEMO_MCP_SERVERS } from "@/lib/integrations/demo";
 import { mergeServersIntoDefinitions } from "@/lib/integrations/view-model";
 import type { IntegrationViewModel } from "@/lib/integrations/types";
+import { PlanCardSkeleton } from "@/components/shared/loading/PlanCardSkeleton";
 import { ConfigureModal } from "./ConfigureModal";
 import { IntegrationCard } from "./IntegrationCard";
 import { IntegrationsIntro } from "./IntegrationsIntro";
-import { IntegrationsTopBar } from "./IntegrationsTopBar";
 
 export function IntegrationsView() {
   const [models, setModels] = useState<IntegrationViewModel[]>(() => mergeServersIntoDefinitions(DEMO_MCP_SERVERS));
@@ -41,9 +41,7 @@ export function IntegrationsView() {
   const configureOpen = useMemo(() => configureTarget !== null, [configureTarget]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-      <IntegrationsTopBar />
-
+    <>
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <IntegrationsIntro />
 
@@ -71,10 +69,7 @@ export function IntegrationsView() {
           <div className="mt-8 space-y-4" aria-busy="true" aria-live="polite">
             <p className="sr-only">Loading integrations</p>
             {Array.from({ length: 4 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="h-[190px] animate-pulse rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-              />
+              <PlanCardSkeleton key={idx} className="h-[190px]" />
             ))}
           </div>
         ) : (
@@ -92,6 +87,6 @@ export function IntegrationsView() {
       </main>
 
       <ConfigureModal integration={configureTarget} open={configureOpen} onClose={() => setConfigureTarget(null)} />
-    </div>
+    </>
   );
 }
