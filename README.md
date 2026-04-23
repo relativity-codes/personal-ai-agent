@@ -4,7 +4,7 @@ Monorepo with a **FastAPI** backend (`backend/`) and a **Next.js** frontend (`fr
 
 ## Prerequisites
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python 3.12+)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python 3.11+)
 - [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/getting-started/install) (Classic or Berry)
 
 ## Environment
@@ -32,8 +32,9 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 - API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 - Health: [http://localhost:8000/health](http://localhost:8000/health)
+- MCP: `GET /api/v1/mcp/servers`, `GET /api/v1/mcp/tools`, `POST /api/v1/mcp/invoke` (details in [backend/README.md](backend/README.md))
 
-More detail: [backend/README.md](backend/README.md).
+See [backend/README.md](backend/README.md) for tests, env vars, and Alembic.
 
 ### 2. Frontend (port 3000)
 

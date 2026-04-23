@@ -1,0 +1,79 @@
+{
+  "_instructions": "POST /api/v1/mcp/invoke with Content-Type: application/json. Send ONE object from 'payloads' as the raw body — do not send { \"name\": ..., \"body\": ... }. Swagger: paste only the inner object (e.g. payloads.gmail_list_threads).",
+  "payloads": {
+    "github_list_open_pull_requests": {
+      "server_id": "github",
+      "tool": "list_open_pull_requests",
+      "arguments": {
+        "owner": "octocat",
+        "repo": "Hello-World",
+        "state": "open"
+      }
+    },
+    "github_list_commits": {
+      "server_id": "github",
+      "tool": "list_commits",
+      "arguments": {
+        "owner": "octocat",
+        "repo": "Hello-World",
+        "sha": "HEAD",
+        "per_page": 10
+      }
+    },
+    "notion_query_database": {
+      "server_id": "notion",
+      "tool": "query_database",
+      "arguments": {
+        "database_id": "YOUR_DATABASE_UUID",
+        "page_size": 10
+      }
+    },
+    "notion_create_page": {
+      "server_id": "notion",
+      "tool": "create_page",
+      "arguments": {
+        "parent_id": "YOUR_PARENT_PAGE_OR_DB_UUID",
+        "title": "Standup notes",
+        "parent_type": "page_id"
+      }
+    },
+    "calendar_list_events": {
+      "server_id": "calendar",
+      "tool": "list_events",
+      "arguments": {
+        "time_min": "2026-04-22T00:00:00Z",
+        "time_max": "2026-04-29T23:59:59Z",
+        "max_results": 20
+      }
+    },
+    "calendar_detect_overlaps": {
+      "server_id": "calendar",
+      "tool": "detect_overlaps",
+      "arguments": {
+        "events": [
+          { "summary": "A", "start": "2026-04-22T14:00:00Z", "end": "2026-04-22T15:00:00Z" },
+          { "summary": "B", "start": "2026-04-22T14:30:00Z", "end": "2026-04-22T15:30:00Z" }
+        ]
+      }
+    },
+    "gmail_list_threads": {
+      "server_id": "gmail",
+      "tool": "list_threads",
+      "arguments": {
+        "query": "is:unread",
+        "max_results": 10
+      }
+    },
+    "gmail_list_threads_with_oauth_refresh": {
+      "server_id": "gmail",
+      "tool": "list_threads",
+      "arguments": {
+        "query": "is:unread",
+        "max_results": 10
+      },
+      "oauth": {
+        "google_refresh_token": "PASTE_REFRESH_FROM_POST_/mcp/oauth/google/token"
+      }
+    }
+  }
+}

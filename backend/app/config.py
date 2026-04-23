@@ -86,10 +86,29 @@ class Settings(BaseSettings):
 
     GITHUB_CLIENT_ID: Optional[str] = None
     GITHUB_CLIENT_SECRET: Optional[str] = None
+    GITHUB_TOKEN: str = ""
+
     NOTION_CLIENT_ID: Optional[str] = None
     NOTION_CLIENT_SECRET: Optional[str] = None
+    NOTION_TOKEN: str = ""
+
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REFRESH_TOKEN: str = ""
+    GOOGLE_CALENDAR_ACCESS_TOKEN: str = ""
+
+    GMAIL_ACCESS_TOKEN: str = ""
+
+    GOOGLE_OAUTH_SCOPES: str = Field(
+        default=(
+            "https://www.googleapis.com/auth/calendar.readonly "
+            "https://www.googleapis.com/auth/gmail.readonly"
+        ),
+    )
+
+    GITHUB_TEST_OWNER: str = "octocat"
+    GITHUB_TEST_REPO: str = "Hello-World"
+    NOTION_TEST_DATABASE_ID: str = ""
 
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_PERIOD: int = 60
