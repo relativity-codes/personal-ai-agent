@@ -5,14 +5,18 @@ from typing import Dict, Any, List
 from app.agents.state import AgentState, TaskStatus
 from app.mcp.base import MCPRegistry
 from app.services.cache_service import redis_client
+from app.db.repositories.user_repository import UserRepository
+from app.db.repositories.audit_repository import AuditRepository
 
 class ActionAgent:
     """
     Action Agent: Executes MCP server calls.
     """
     
-    def __init__(self, mcp_registry: MCPRegistry):
+    def __init__(self, mcp_registry: MCPRegistry, user_repo: UserRepository, audit_repo: AuditRepository):
         self.mcp_registry = mcp_registry
+        self.user_repo = user_repo
+        self.audit_repo = audit_repo
     
     async def execute_task(self, state: AgentState, task: Dict) -> AgentState:
         """
@@ -71,9 +75,9 @@ class ActionAgent:
         
         return state
 
-def create_action_node(mcp_registry: MCPRegistry):
+def create_action_node(mcp_registry: MCPRegistry, user_repo: UserRepository, audit_repo: AuditRepository):
     """Create Action Agent node for LangGraph."""
-    agent = ActionAgent(mcp_registry)
+    agent = ActionAgent(mcp_registry, user_repo, audit_repo)
     
     async def action_node(state: AgentState) -> AgentState:
         tasks = state.get("tasks", [])

@@ -2,14 +2,18 @@ from app.agents.state import AgentState
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import RESPONSE_AGGREGATOR_PROMPT
 import json
+from app.db.repositories.user_repository import UserRepository
+from app.db.repositories.audit_repository import AuditRepository
 
 class ResponseAgent:
     """
     Response Agent: Aggregates results and generates the final user-facing response.
     """
     
-    def __init__(self, openrouter_client: OpenRouterClient):
+    def __init__(self, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
         self.openrouter = openrouter_client
+        self.user_repo = user_repo
+        self.audit_repo = audit_repo
 
     async def generate_response(self, state: AgentState) -> AgentState:
         """
@@ -38,9 +42,9 @@ class ResponseAgent:
         
         return state
 
-def create_response_node(openrouter_client: OpenRouterClient):
+def create_response_node(openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
     """Create Response Agent node for LangGraph."""
-    agent = ResponseAgent(openrouter_client)
+    agent = ResponseAgent(openrouter_client, user_repo, audit_repo)
 
     async def response_node(state: AgentState) -> AgentState:
         return await agent.generate_response(state)
