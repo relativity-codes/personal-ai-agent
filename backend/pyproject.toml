@@ -20,6 +20,7 @@ dependencies = [
     "langgraph>=0.2",
     "svix>=1.0",
     "python-decouple>=3.8",
+    "google-auth>=2.30",
 ]
 
 [dependency-groups]

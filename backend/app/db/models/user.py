@@ -12,8 +12,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    clerk_id = Column(String(255), unique=True, nullable=False, index=True)
-    email = Column(String(255), nullable=False)
+    google_id = Column(String(255), unique=True, nullable=True, index=True)
+    email = Column(String(255), nullable=False, unique=True, index=True)
     name = Column(String(255))
     avatar_url = Column(String(500))
     default_github_repo = Column(String(255))

@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
-from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, task_router, session_router
+from app.api.middleware import AuthMiddleware
+from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, task_router, session_router, auth
 from app.api.websocket import chat as ws_chat
 from app.config import settings
 from app.core.openrouter import OpenRouterClient
@@ -48,6 +49,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts_list)
+app.add_middleware(AuthMiddleware)
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
@@ -61,6 +63,7 @@ app.include_router(plan_router.router, prefix="/api/v1/plans", tags=["plans"])
 app.include_router(task_router.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(session_router.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(ws_chat.router, prefix="/ws", tags=["websocket"])
+app.include_router(auth.router, prefix="/app", tags=["auth"])
 
 
 @app.get("/health")
