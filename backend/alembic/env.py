@@ -17,7 +17,16 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return settings.DATABASE_URL.replace("+asyncpg", "")
+    # Use psycopg3 driver for CockroachDB migrations (works with CockroachDB and SQLAlchemy)
+    url = settings.DATABASE_URL
+    if "+asyncpg" in url:
+        url = url.replace("+asyncpg", "+psycopg")
+        # Use psycopg2 driver for CockroachDB migrations (recommended by CockroachDB)
+        if "+asyncpg" in url:
+            url = url.replace("+asyncpg", "+psycopg2")
+        elif "+psycopg" in url:
+            url = url.replace("+psycopg", "+psycopg2")
+        return url
 
 
 def run_migrations_offline() -> None:
@@ -40,6 +49,19 @@ def do_run_migrations(connection: Connection) -> None:
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section) or {}
     configuration["sqlalchemy.url"] = get_url()
+
+    # --- CockroachDB version string workaround ---
+    import sqlalchemy.dialects.postgresql.psycopg2 as pg_psycopg2
+    import re
+    def cockroach_version_workaround(self, connection):
+        version = connection.exec_driver_sql("select version()", ()).scalar()
+        match = re.search(r"v(\d+)(?:\.(\d+))?(?:\.(\d+))?", version)
+        if match:
+            return tuple(int(x) if x is not None else 0 for x in match.groups())
+        return (0, 0, 0)
+    pg_psycopg2.PGDialect_psycopg2._get_server_version_info = cockroach_version_workaround
+        # --- end workaround ---
+
     connectable = engine_from_config(configuration, prefix="sqlalchemy.", poolclass=pool.NullPool)
     with connectable.connect() as connection:
         do_run_migrations(connection)

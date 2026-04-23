@@ -95,3 +95,6 @@ async def get_current_user_optional(
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+# Alias for compatibility with existing imports
+from app.db.session import get_session as get_db
