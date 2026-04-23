@@ -83,7 +83,7 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Last sync:{" "}
               <time dateTime={model.lastSync}>
-                {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
+                {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(
                   new Date(model.lastSync),
                 )}
               </time>
