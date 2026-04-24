@@ -30,8 +30,9 @@ def should_continue(state: AgentState) -> Literal["task_planner", "action", "res
     if state.get("tasks"):
         return "action"
     
-    # Otherwise, the default next step is to continue planning.
-    return "task_planner"
+    # If we have reached this point and have no tasks, we should try to finalize.
+    # verify_completion should have set final_response, but if not, go to response agent anyway.
+    return "response"
 
 def create_managerial_graph() -> StateGraph:
     """
