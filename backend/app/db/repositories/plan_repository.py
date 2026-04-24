@@ -12,6 +12,18 @@ from uuid import UUID
 from app.db.session import async_session_factory, async_session_scope
 
 
+def _task_to_dict(task) -> dict[str, Any]:
+    return {
+        "task_id": str(task.id),
+        "step": task.step,
+        "description": task.description,
+        "mcp_server": task.mcp_server,
+        "tool": task.tool,
+        "arguments": task.parameters,
+        "depends_on": list(task.depends_on or []),
+        "status": task.status
+    }
+
 def _plan_to_dict(row: ExecutionPlan) -> dict[str, Any]:
     return {
         "id": str(row.id),
@@ -19,7 +31,7 @@ def _plan_to_dict(row: ExecutionPlan) -> dict[str, Any]:
         "session_id": row.session_id,
         "intent_type": row.intent_type,
         "status": row.status,
-        "tasks": row.tasks or [],
+        "tasks": [_task_to_dict(t) for t in (row.tasks or [])],
         "task_status": dict(row.task_status or {}),
         "task_results": dict(row.task_results or {}),
         "task_errors": dict(row.task_errors or {}),
@@ -31,7 +43,7 @@ class PlanRepository:
     @staticmethod
     async def get(plan_id: str) -> dict[str, Any] | None:
         from sqlalchemy.orm import selectinload
-        pid = uuid.UUID(plan_id)
+        pid = uuid.UUID(str(plan_id))
         async with async_session_factory() as session:
             stmt = select(ExecutionPlan).where(ExecutionPlan.id == pid).options(selectinload(ExecutionPlan.tasks))
             result = await session.execute(stmt)
@@ -45,8 +57,8 @@ class PlanRepository:
         from app.db.models.task import Task
         async with async_session_scope() as session:
             ep = ExecutionPlan(
-                id=uuid.UUID(plan_data["id"]),
-                user_id=uuid.UUID(plan_data["user_id"]),
+                id=uuid.UUID(str(plan_data["id"])),
+                user_id=uuid.UUID(str(plan_data["user_id"])),
                 session_id=plan_data["session_id"],
                 intent_type=plan_data["intent_type"],
                 status=plan_data.get("status", "pending"),
@@ -60,7 +72,7 @@ class PlanRepository:
             tasks = []
             for t_data in plan_data.get("tasks", []):
                 tasks.append(Task(
-                    id=uuid.UUID(t_data["task_id"]),
+                    id=uuid.UUID(str(t_data["task_id"])),
                     session_id=plan_data["session_id"],
                     plan_id=ep.id,
                     step=t_data["step"],
@@ -82,7 +94,7 @@ class PlanRepository:
         result: Any = None,
         error: str | None = None,
     ) -> None:
-        pid = uuid.UUID(plan_id)
+        pid = uuid.UUID(str(plan_id))
         async with async_session_scope() as session:
             row = await session.get(ExecutionPlan, pid)
             if row is None:

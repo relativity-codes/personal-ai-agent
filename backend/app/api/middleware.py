@@ -1,7 +1,7 @@
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import Callable, Awaitable
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 import jwt
 
 from app.config import settings
@@ -18,7 +18,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         # Paths that do not require authentication
         path = request.url.path
-        allowed_prefixes = ["/api/v1/auth", "/_next", "/static", "/favicon.ico"]
+        allowed_prefixes = ["/api/v1/auth", "/_next", "/static", "/favicon.ico", "/health"]
         allowed_paths = ["/", "/docs", "/redoc", "/openapi.json"]
         
         if (
@@ -32,9 +32,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         access_token = request.cookies.get("access_token")
 
         if not access_token:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not authenticated, Please login again",
+                content={"detail": "Not authenticated, Please login again"},
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -44,23 +44,37 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
             user_id: str = payload.get("sub")
             if user_id is None:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token, Please login again"
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid token, Please login again"}
                 )
         except jwt.PyJWTError as e:
             log_exception(logger, e, context="JWT decode failed in AuthMiddleware")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token, Please login again"
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Invalid token, Please login again"}
             )
 
         async with async_session_factory() as session:
-            user = await UserRepository.get_by_id(session, user_id)
-            if not user:
-                logger.warning(f"User {user_id} from token not found in database")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            try:
+                # user_id is coming from token 'sub', which might be the ID or google_id depending on how it's created
+                # But here UserRepository expects ID (UUID)
+                from app.api.deps import parse_uuid
+                uid = parse_uuid(user_id)
+                user = await UserRepository.get_by_id(session, uid)
+                if not user:
+                    logger.warning(f"User {user_id} from token not found in database")
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={"detail": "User not found"}
+                    )
+                request.state.user = user
+            except Exception as e:
+                logger.error(f"Error fetching user in middleware: {e}")
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Authentication failed"}
                 )
-            request.state.user = user
 
         response = await call_next(request)
         return response
