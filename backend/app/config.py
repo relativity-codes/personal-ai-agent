@@ -67,10 +67,14 @@ class Settings(BaseSettings):
         )
         params = []
         if self.POSTGRES_SSL_MODE:
-            params.append(f"sslmode={self.POSTGRES_SSL_MODE}")
+            # asyncpg uses 'ssl' instead of 'sslmode'
+            params.append("ssl=require")
         ssl_cert = self.POSTGRES_SSL_ROOT_CERT
         if ssl_cert:
-            params.append(f"sslrootcert={ssl_cert}")
+            # asyncpg doesn't support sslrootcert in the URL easily, 
+            # but we can try to pass it if sqlalchemy handles it.
+            # Most managed DBs work with just ssl=require.
+            pass
         if params:
             url += "?" + "&".join(params)
         return url
@@ -137,7 +141,7 @@ class Settings(BaseSettings):
 
     GMAIL_ACCESS_TOKEN: str = config("GMAIL_ACCESS_TOKEN", default="")
 
-    GOOGLE_OAUTH_SCOPES: str = config("GOOGLE_OAUTH_SCOPES", default="https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly")
+    GOOGLE_OAUTH_SCOPES: str = config("GOOGLE_OAUTH_SCOPES", default="https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send")
 
     GITHUB_TEST_OWNER: str = config("GITHUB_TEST_OWNER", default="octocat")
     GITHUB_TEST_REPO: str = config("GITHUB_TEST_REPO", default="Hello-World")

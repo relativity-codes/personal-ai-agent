@@ -3,15 +3,17 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-echo "--- Setting up Backend Virtual Environment ---"
-(cd backend && uv venv)
-echo "Virtual environment ready."
+echo "Setting up virtual environment..."
+if [ ! -d "backend/.venv" ]; then
+  (cd backend && uv venv)
+fi
+echo "Virtual environment set up."
 
-echo "--- Installing Backend Dependencies ---"
+echo "Installing Backend Dependencies..."
 (cd backend && uv sync)
 echo "Backend dependencies installed."
 
-echo "--- Setting up Environment Variables ---"
+echo "Setting up Environment Variables..."
 if [ ! -f backend/.env ]; then
     cp backend/.env.example backend/.env
     echo "backend/.env created."
@@ -20,12 +22,12 @@ echo "IMPORTANT: Ensure your backend/.env file is configured to connect to your 
 echo "Environment variables checked."
 
 
-echo "--- Running Database Migrations ---"
+echo "Running Database Migrations..."
 echo "Attempting to run migrations against the external database..."
 (cd backend && uv run alembic upgrade head)
 echo "Database migrations applied."
 
-echo "--- Building Frontend ---"
+echo "Building Frontend..."
 (cd frontend && yarn install && yarn build)
 echo "Frontend build complete."
 

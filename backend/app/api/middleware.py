@@ -1,19 +1,28 @@
 from fastapi import Request, HTTPException, status
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseFunction
+from starlette.middleware.base import BaseHTTPMiddleware
+from typing import Callable, Awaitable
 from starlette.responses import Response
 import jwt
 
 from app.config import settings
 from app.db.repositories.user_repository import UserRepository
-from app.db.session import SessionLocal
+from app.db.session import async_session_factory
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(
-        self, request: Request, call_next: RequestResponseFunction
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         # Paths that do not require authentication
+        path = request.url.path
+        allowed_prefixes = ["/api/v1/auth", "/_next", "/static", "/favicon.ico"]
         allowed_paths = ["/", "/docs", "/redoc", "/openapi.json"]
-        if request.url.path in allowed_paths or request.url.path.startswith("/app/auth"):
+        
+        if (
+            settings.DEV_AUTH_BYPASS or
+            path in allowed_paths or 
+            any(path.startswith(prefix) for prefix in allowed_prefixes) or
+            any(path.endswith(ext) for ext in [".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".woff", ".woff2"])
+        ):
             return await call_next(request)
 
         access_token = request.cookies.get("access_token")
@@ -39,7 +48,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
             )
 
-        async with SessionLocal() as session:
+        async with async_session_factory() as session:
             user = await UserRepository.get_by_id(session, user_id)
             if not user:
                 raise HTTPException(

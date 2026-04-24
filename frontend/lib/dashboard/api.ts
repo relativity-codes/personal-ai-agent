@@ -1,5 +1,4 @@
-import { getApiBaseUrl } from "@/lib/api/client";
-import type { ApiResult } from "@/lib/api/types";
+import { apiFetch } from "@/lib/api/client";
 import {
   DEMO_ACTIVITY,
   DEMO_MCP_SERVERS,
@@ -7,17 +6,6 @@ import {
   DEMO_STATS,
 } from "./demo";
 import type { ActivityItem, DashboardStats, McpServer, RecentPlan } from "./types";
-
-async function apiFetch<T>(path: string): Promise<ApiResult<T>> {
-  try {
-    const res = await fetch(`${getApiBaseUrl()}${path}`, { cache: "no-store" });
-    if (!res.ok) return { success: false, error: `HTTP ${res.status}` };
-    const data = (await res.json()) as T;
-    return { success: true, data };
-  } catch (e) {
-    return { success: false, error: String(e) };
-  }
-}
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   const [plansResult, activityResult] = await Promise.all([

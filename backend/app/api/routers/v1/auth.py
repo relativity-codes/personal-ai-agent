@@ -9,13 +9,14 @@ from app.core.security import create_access_token, set_access_cookies
 from app.db.models.user import User
 from app.db.session import get_session
 from app.services.user_service import UserService
+from app.api.routers.v1.user_router import UserRead
 
 router = APIRouter()
 
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-@router.post("/auth/google", response_model=User)
+@router.post("/auth/google", response_model=UserRead)
 async def auth_google(
     login_request: GoogleLoginRequest,
     response: Response,
@@ -51,7 +52,7 @@ async def logout(response: Response):
     return {"message": "Logged out successfully"}
 
 
-@router.get("/users/me", response_model=User)
+@router.get("/users/me", response_model=UserRead)
 async def read_users_me(request: Request):
     """Get the currently authenticated user."""
     return request.state.user

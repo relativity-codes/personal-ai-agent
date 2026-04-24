@@ -27,3 +27,4 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     plans = relationship("ExecutionPlan", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")

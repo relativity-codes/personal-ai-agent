@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
@@ -42,9 +43,19 @@ const SignIn = () => {
   };
 
   return (
-    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
-      <div className="flex flex-col items-center gap-4">
-        <GoogleLogin onSuccess={handleSuccess} onError={handleError} useOneTap />
+    <GoogleOAuthProvider
+      clientId={
+        process.env.GOOGLE_CLIENT_ID ||
+        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+        ""
+      }
+    >
+      <div className="flex flex-col items-center justify-center gap-4">
+        <GoogleLogin
+          onSuccess={handleSuccess}
+          onError={handleError}
+          useOneTap
+        />
         {error && <p className="text-red-500">{error}</p>}
       </div>
     </GoogleOAuthProvider>

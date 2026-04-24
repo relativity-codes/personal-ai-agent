@@ -17,16 +17,16 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    # Use psycopg3 driver for CockroachDB migrations (works with CockroachDB and SQLAlchemy)
+    # Use psycopg2 driver for migrations
     url = settings.DATABASE_URL
     if "+asyncpg" in url:
-        url = url.replace("+asyncpg", "+psycopg")
-        # Use psycopg2 driver for CockroachDB migrations (recommended by CockroachDB)
-        if "+asyncpg" in url:
-            url = url.replace("+asyncpg", "+psycopg2")
-        elif "+psycopg" in url:
-            url = url.replace("+psycopg", "+psycopg2")
-        return url
+        url = url.replace("+asyncpg", "+psycopg2")
+    
+    # psycopg2 expects 'sslmode', while asyncpg uses 'ssl'
+    if "ssl=require" in url:
+        url = url.replace("ssl=require", "sslmode=require")
+    
+    return url
 
 
 def run_migrations_offline() -> None:

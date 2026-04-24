@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
   webpack: (config, { dev }) => {
     // Dev-only: stale webpack filesystem cache can reference missing numeric chunks (e.g. ./948.js)
     // after refactors or interrupted compiles—especially when loading the internal _not-found route.

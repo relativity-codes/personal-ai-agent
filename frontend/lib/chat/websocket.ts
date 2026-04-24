@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "@/lib/api/client";
+import { apiFetch, getApiBaseUrl } from "@/lib/api/client";
 import type { WsIncomingMessage } from "./types";
 
 type ChatWebSocketOptions = {
@@ -19,8 +19,12 @@ export class ChatWebSocket {
 
   /** Resolves true when the socket is open, false on error or timeout. */
   connect(timeoutMs = 5000): Promise<boolean> {
-    const base = getApiBaseUrl().replace(/^http/, "ws");
-    const socket = new WebSocket(`${base}/ws/chat`);
+    let base = getApiBaseUrl();
+    if (!base) {
+      base = window.location.origin;
+    }
+    const wsBase = base.replace(/^http/, "ws");
+    const socket = new WebSocket(`${wsBase}/ws/chat`);
     this.ws = socket;
 
     return new Promise((resolve) => {
@@ -84,14 +88,13 @@ export async function sendMessageRest(
   message: string,
   sessionId?: string
 ): Promise<{ response: string; session_id: string }> {
-  const body: { message: string; session_id?: string } = { message };
-  if (sessionId) body.session_id = sessionId;
-
-  const res = await fetch(`${getApiBaseUrl()}/api/v1/chat/`, {
+  const result = await apiFetch<{ response: string; session_id: string }>("/api/v1/chat/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ message, session_id: sessionId ?? null }),
   });
-  if (!res.ok) throw new Error(`Chat API error: ${res.status}`);
-  return res.json() as Promise<{ response: string; session_id: string }>;
+
+  if (!result.success) {
+    throw new Error(result.error);
+  }
+  return result.data;
 }
