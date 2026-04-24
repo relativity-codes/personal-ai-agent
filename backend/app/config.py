@@ -28,8 +28,15 @@ class Settings(BaseSettings):
     # Stable UUID string for the seeded dev user (see app.db.session._ensure_dev_user_row).
     DEV_USER_INTERNAL_ID: str = config("DEV_USER_INTERNAL_ID", default="11111111-1111-1111-1111-111111111111")
 
+    # Auth settings
+    SECRET_KEY: str = config("SECRET_KEY", default="a_very_secret_key")
+    ALGORITHM: str = config("ALGORITHM", default="HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=30, cast=int)
+    SECURE_COOKIES: bool = config("SECURE_COOKIES", default=False, cast=bool)
+
     CORS_ORIGINS: str = config("CORS_ORIGINS", default="http://localhost:3000,http://localhost:8000")
     ALLOWED_HOSTS: str = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,test,*")
+    HOST: str = config("HOST", default="http://localhost:8000")
 
     POSTGRES_HOST: str = config("POSTGRES_HOST")
     POSTGRES_PORT: int = config("POSTGRES_PORT")
@@ -60,10 +67,14 @@ class Settings(BaseSettings):
         )
         params = []
         if self.POSTGRES_SSL_MODE:
-            params.append(f"sslmode={self.POSTGRES_SSL_MODE}")
+            # asyncpg uses 'ssl' instead of 'sslmode'
+            params.append("ssl=require")
         ssl_cert = self.POSTGRES_SSL_ROOT_CERT
         if ssl_cert:
-            params.append(f"sslrootcert={ssl_cert}")
+            # asyncpg doesn't support sslrootcert in the URL easily, 
+            # but we can try to pass it if sqlalchemy handles it.
+            # Most managed DBs work with just ssl=require.
+            pass
         if params:
             url += "?" + "&".join(params)
         return url
@@ -71,13 +82,17 @@ class Settings(BaseSettings):
     REDIS_HOST: str = config("REDIS_HOST", default="localhost")
     REDIS_PORT: int = config("REDIS_PORT", default=6379, cast=int)
     REDIS_PASSWORD: Optional[str] = config("REDIS_PASSWORD", default=None)
-    REDIS_DB: int = config("REDIS_DB", default=0, cast=int)
+    REDIS_DB: str = config("REDIS_DB", default=0, cast=str)
+    REDIS_USER: Optional[str] = config("REDIS_USER", default=None)
+
 
     @property
     def REDIS_URL(self) -> str:
-        if self.REDIS_PASSWORD:
-            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        if self.REDIS_PASSWORD and self.REDIS_USER:
+            return f"redis://{self.REDIS_USER}:{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        if self.REDIS_PASSWORD and not self.REDIS_USER:
+            return f"redis://:{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{int(self.REDIS_DB)}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{int(self.REDIS_DB)}"
 
     OPENROUTER_API_KEY: str = config("OPENROUTER_API_KEY", default="")
     OPENROUTER_BASE_URL: str = config("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
@@ -126,7 +141,7 @@ class Settings(BaseSettings):
 
     GMAIL_ACCESS_TOKEN: str = config("GMAIL_ACCESS_TOKEN", default="")
 
-    GOOGLE_OAUTH_SCOPES: str = config("GOOGLE_OAUTH_SCOPES", default="https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly")
+    GOOGLE_OAUTH_SCOPES: str = config("GOOGLE_OAUTH_SCOPES", default="https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send")
 
     GITHUB_TEST_OWNER: str = config("GITHUB_TEST_OWNER", default="octocat")
     GITHUB_TEST_REPO: str = config("GITHUB_TEST_REPO", default="Hello-World")

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { IntegrationId } from "@/lib/integrations/types";
-import { getMcpAuthUrl } from "@/lib/integrations/api";
+import { fetchGoogleAuthorizeUrl } from "@/lib/integrations/api";
 
 type Props = {
   integrationId: IntegrationId;
@@ -9,16 +10,34 @@ type Props = {
   busy?: boolean;
 };
 
-export function OAuthButton({ integrationId, disabled, busy }: Props) {
+export function OAuthButton({ integrationId, disabled, busy: busyProp }: Props) {
+  const [busyState, setBusyState] = useState(false);
+  const busy = busyProp || busyState;
+
+  const handleClick = async () => {
+    if (integrationId === "calendar" || integrationId === "gmail") {
+      setBusyState(true);
+      const redirectUri = `${window.location.origin}/integrations/callback`;
+      const res = await fetchGoogleAuthorizeUrl(redirectUri);
+      if (res.success) {
+        window.location.assign(res.data.url);
+      } else {
+        alert(`Failed to get auth URL: ${res.error}`);
+        setBusyState(false);
+      }
+    } else {
+      // Handle other integrations (placeholder for now)
+      alert(`${integrationId} auth not implemented yet`);
+    }
+  };
+
   return (
     <button
       type="button"
       className="inline-flex w-full min-h-[44px] min-w-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:outline-zinc-200 sm:w-auto sm:min-w-[140px]"
       disabled={disabled || busy}
       aria-busy={busy || undefined}
-      onClick={() => {
-        window.location.assign(getMcpAuthUrl(integrationId));
-      }}
+      onClick={handleClick}
     >
       {busy ? (
         <>

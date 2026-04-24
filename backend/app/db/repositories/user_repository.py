@@ -16,8 +16,13 @@ class UserRepository:
         return result.scalars().first()
 
     @staticmethod
-    async def get_by_clerk_id(session: AsyncSession, clerk_id: str) -> User | None:
-        result = await session.execute(select(User).where(User.clerk_id == clerk_id))
+    async def get_by_google_id(session: AsyncSession, google_id: str) -> User | None:
+        result = await session.execute(select(User).where(User.google_id == google_id))
+        return result.scalars().first()
+
+    @staticmethod
+    async def get_by_email(session: AsyncSession, email: str) -> User | None:
+        result = await session.execute(select(User).where(User.email == email))
         return result.scalars().first()
 
     @staticmethod
@@ -29,20 +34,20 @@ class UserRepository:
         return user
 
     @staticmethod
-    async def update(session: AsyncSession, clerk_id: str, **kwargs):
+    async def update(session: AsyncSession, user_id: UUID, **kwargs):
         query = (
             update(User)
-            .where(User.clerk_id == clerk_id)
+            .where(User.id == user_id)
             .values(**kwargs)
             .returning(User)
         )
         result = await session.execute(query)
-        await session.commit()
+        await session.flush()
         return result.scalars().first()
 
     @staticmethod
     async def get_or_create(session: AsyncSession, **kwargs):
-        user = await UserRepository.get_by_clerk_id(session, kwargs["clerk_id"])
+        user = await UserRepository.get_by_google_id(session, kwargs["google_id"])
         if user:
             return user
         return await UserRepository.create(session, **kwargs)
@@ -55,11 +60,5 @@ class UserRepository:
     @staticmethod
     async def delete_by_id(session: AsyncSession, user_id: UUID) -> bool:
         result = await session.execute(delete(User).where(User.id == user_id))
-        await session.commit()
-        return result.rowcount > 0
-
-    @staticmethod
-    async def delete_by_clerk_id(session: AsyncSession, clerk_id: str) -> bool:
-        result = await session.execute(delete(User).where(User.clerk_id == clerk_id))
-        await session.commit()
+        await session.flush()
         return result.rowcount > 0

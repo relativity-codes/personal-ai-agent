@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import jwt
 from typing import Annotated, TypedDict
 
 from fastapi import Depends, Header, HTTPException
@@ -31,6 +32,7 @@ class CurrentUser(TypedDict, total=False):
 async def get_current_user(
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
+    db: AsyncSession = Depends(get_session),
 ) -> CurrentUser:
     if settings.DEV_AUTH_BYPASS:
         return {
@@ -45,41 +47,28 @@ async def get_current_user(
     if not raw:
         raise HTTPException(status_code=401, detail="Missing bearer token")
 
-    if not settings.CLERK_ISSUER.strip():
-        raise HTTPException(
-            status_code=503,
-            detail="Server auth misconfigured: set CLERK_ISSUER or enable DEV_AUTH_BYPASS",
-        )
-
     try:
-        claims = security.decode_clerk_session_token(raw)
+        payload = jwt.decode(
+            raw, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token: missing sub")
     except Exception as exc:
         logger.debug("jwt verify failed: %s", exc)
         raise HTTPException(status_code=401, detail="Invalid or expired session token") from exc
 
-    profile = security.claims_to_profile(claims)
-    clerk_sub = profile["clerk_sub"]
-    if not clerk_sub:
-        raise HTTPException(status_code=401, detail="Token missing subject")
-
-    async with async_session_factory() as session:
-        user = await UserRepository.get_by_clerk_id(session, clerk_sub)
-        if user is None:
-            user = await UserRepository.upsert_from_clerk(
-                session,
-                clerk_id=clerk_sub,
-                email=profile.get("email") or "unknown@users.clerk",
-                name=profile.get("name"),
-                avatar_url=profile.get("avatar_url"),
-            )
-        await session.commit()
-        return {
-            "user_id": str(user.id),
-            "clerk_sub": clerk_sub,
-            "email": user.email,
-            "name": user.name,
-            "avatar_url": user.avatar_url,
-        }
+    user = await UserRepository.get_by_id(db, parse_uuid(user_id))
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    return {
+        "user_id": str(user.id),
+        "clerk_sub": getattr(user, "clerk_id", "none"),
+        "email": user.email,
+        "name": user.name,
+        "avatar_url": user.avatar_url,
+    }
 
 
 async def get_current_user_optional(

@@ -58,7 +58,7 @@ async def update_me(
         raise HTTPException(status_code=404, detail="User not found")
     data = body.model_dump(exclude_unset=True)
     if data:
-        await UserRepository.update(session, row, **data)
+        await UserRepository.update(session, row.id, **data)
         await session.commit()
     return UserMeResponse(
         id=str(row.id),
