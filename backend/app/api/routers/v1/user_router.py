@@ -10,7 +10,7 @@ from uuid import UUID
 # Pydantic schema for user response
 class UserRead(BaseModel):
     id: UUID
-    clerk_id: str
+    google_id: Optional[str] = None
     email: EmailStr
     name: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -20,8 +20,8 @@ class UserRead(BaseModel):
     working_hours_start: Optional[str] = None
     working_hours_end: Optional[str] = None
     mcp_tokens: Optional[dict] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     is_active: Optional[bool] = None
 
     class Config:
@@ -35,7 +35,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     first_name: str | None = None
     last_name: str | None = None
-    clerk_id: str
+    google_id: str
 
 router = APIRouter()
 
