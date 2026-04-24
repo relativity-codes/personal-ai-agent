@@ -85,7 +85,7 @@ async def _ensure_dev_user_row() -> None:
                 session.add(
                     User(
                         id=dev_id,
-                        clerk_id="dev_bypass",
+                        google_id="dev_bypass",
                         email="dev@localhost",
                         name="Dev User",
                     )

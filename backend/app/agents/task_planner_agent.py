@@ -3,6 +3,7 @@ from collections import deque
 import uuid
 import json
 import re
+import logging
 from datetime import datetime
 
 from app.agents.state import AgentState, Task, TaskStatus
@@ -12,6 +13,9 @@ from app.db.repositories.audit_repository import AuditRepository
 from app.services.cache_service import redis_client
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import MANAGER_TASK_DECOMPOSER_PROMPT
+from app.utils.logger import log_exception
+
+logger = logging.getLogger(__name__)
 
 class TaskPlannerAgent:
     """
@@ -29,66 +33,106 @@ class TaskPlannerAgent:
         """
         Create execution plan from validated intent.
         """
-        intent = state["validated_intent"]
+        try:
+            intent = state.get("validated_intent")
+            if not intent or state.get("needs_clarification"):
+                logger.info("Skipping task planning: intent missing or clarification needed.")
+                return state
 
-        # Decompose intent into tasks using the LLM
-        tasks = await self._decompose_intent_with_llm(intent, state["user_id"])
+            # Decompose intent into tasks using the LLM
+            tasks = await self._decompose_intent_with_llm(intent, state)
+            print(f"DEBUG: tasks={tasks} (type={type(tasks)})")
+            logger.info(f"Decomposed intent into {len(tasks)} tasks: {tasks}")
 
-        # Validate dependencies
-        all_task_ids = {task["task_id"] for task in tasks}
-        for task in tasks:
-            # Ensure depends_on is a list
-            if "depends_on" not in task:
-                task["depends_on"] = []
-            
-            # Generate task_id for each dependency reference
-            for i, dep_ref in enumerate(task["depends_on"]):
-                # Assuming dep_ref is the "step" number
-                try:
-                    dep_step = int(dep_ref)
-                    # Find the task with that step number
+            # Validate dependencies
+            all_task_ids = {task["task_id"] for task in tasks}
+            for task in tasks:
+                # Ensure depends_on is a list
+                deps = task.get("depends_on")
+                if deps is None:
+                    task["depends_on"] = []
+                elif not isinstance(deps, list):
+                    task["depends_on"] = [deps]
+                
+                logger.info(f"Task {task.get('step')} depends_on: {task['depends_on']} (type: {type(task['depends_on'])})")
+                
+                # Generate task_id for each dependency reference
+                for i, dep_ref in enumerate(task["depends_on"]):
+                    found = False
+                    
+                    # Try as step number (int)
+                    try:
+                        dep_step = int(dep_ref)
+                        for t in tasks:
+                            if t.get("step") == dep_step:
+                                if t["task_id"] != task["task_id"]:
+                                    task["depends_on"][i] = t["task_id"]
+                                    found = True
+                                break
+                    except (ValueError, TypeError):
+                        pass
+                    
+                    if found:
+                        continue
+                        
+                    # Try as original task_id if it was a string
                     for t in tasks:
-                        if t.get("step") == dep_step:
-                            task["depends_on"][i] = t["task_id"]
+                        if t.get("original_task_id") == str(dep_ref):
+                            if t["task_id"] != task["task_id"]:
+                                task["depends_on"][i] = t["task_id"]
+                                found = True
                             break
-                except (ValueError, IndexError):
-                    raise ValueError(f"Task {task['task_id']} has an invalid dependency reference: {dep_ref}")
+                    
+                    if not found:
+                        logger.warning(f"Task {task.get('step')} has an unresolvable dependency: {dep_ref}")
+                        # We'll let the next validation step raise the ValueError if it's still missing
 
-            for dep_id in task.get("depends_on", []):
-                if dep_id not in all_task_ids:
-                    raise ValueError(f"Task {task['task_id']} depends on unknown task {dep_id}")
+                # Filter out self-dependencies and ensure all are known
+                valid_deps = []
+                for dep_id in task.get("depends_on", []):
+                    if dep_id == task["task_id"]:
+                        logger.warning(f"Removing self-dependency for task {task['task_id']}")
+                        continue
+                    if dep_id not in all_task_ids:
+                        raise ValueError(f"Task {task['task_id']} depends on unknown task {dep_id}")
+                    valid_deps.append(dep_id)
+                task["depends_on"] = valid_deps
 
-        # Calculate execution order (topological sort)
-        execution_order = self._topological_sort(tasks)
+            # Calculate execution order (topological sort)
+            execution_order = self._topological_sort(tasks)
 
-        # Create plan in database
-        plan_id = str(uuid.uuid4())
-        plan_data = {
-            "id": plan_id,
-            "user_id": state["user_id"],
-            "session_id": state["session_id"],
-            "intent_type": intent["intent_type"],
-            "tasks": tasks,
-            "task_status": {task["task_id"]: "pending" for task in tasks},
-            "execution_order": execution_order,
-            "task_results": {},
-            "task_errors": {}
-        }
+            # Create plan in database
+            plan_id = str(uuid.uuid4())
+            plan_data = {
+                "id": plan_id,
+                "user_id": state["user_id"],
+                "session_id": state["session_id"],
+                "intent_type": intent["intent_type"],
+                "tasks": tasks,
+                "task_status": {task["task_id"]: "pending" for task in tasks},
+                "execution_order": execution_order,
+                "task_results": {},
+                "task_errors": {}
+            }
 
-        await self.plan_repo.create(plan_data)
+            await self.plan_repo.create(plan_data)
 
-        # Cache plan in Redis for fast access
-        await redis_client.set_json(f"plan:{plan_id}", plan_data, ttl=3600)
+            # Cache plan in Redis for fast access
+            await redis_client.set_json(f"plan:{plan_id}", plan_data, ttl=3600)
 
-        state["plan_id"] = plan_id
-        state["tasks"] = tasks
-        state["task_status"] = {task["task_id"]: TaskStatus.PENDING for task in tasks}
-        state["execution_order"] = execution_order
-        state["current_task_index"] = 0
-        state["task_results"] = {}
-        state["task_errors"] = {}
+            state["plan_id"] = plan_id
+            state["tasks"] = tasks
+            state["task_status"] = {task["task_id"]: TaskStatus.PENDING for task in tasks}
+            state["execution_order"] = execution_order
+            state["current_task_index"] = 0
+            state["task_results"] = {}
+            state["task_errors"] = {}
 
-        return state
+            return state
+        except Exception as e:
+            log_exception(logger, e, context=f"Failed to create plan for session {state.get('session_id')}")
+            state["error"] = str(e)
+            raise e
 
     async def get_next_tasks(self, state: AgentState) -> AgentState:
         """
@@ -212,17 +256,22 @@ class TaskPlannerAgent:
                         queue.append(other_id)
 
         if len(order) != len(tasks):
-            # Find the nodes that are part of the cycle
             cycle_nodes = {k for k, v in in_degree.items() if v > 0}
             raise ValueError(f"Circular dependency detected in tasks: {cycle_nodes}")
 
         return order
 
-    async def _decompose_intent_with_llm(self, intent: Dict, user_id: str) -> List[Dict]:
+    async def _decompose_intent_with_llm(self, intent: Dict, state: AgentState) -> List[Dict]:
         """
         Decompose intent into tasks using the LLM.
         """
         prompt = MANAGER_TASK_DECOMPOSER_PROMPT.replace("{{current_date}}", datetime.now().isoformat())
+        
+        # Add user context to the prompt
+        user_context = state.get("user_context", {})
+        if user_context:
+            context_str = "\n".join([f"{k}: {v}" for k, v in user_context.items() if v])
+            prompt = f"{prompt}\n\nUser Context:\n{context_str}"
         
         response = await self.openrouter.complete(
             messages=[
@@ -235,20 +284,53 @@ class TaskPlannerAgent:
 
         content = response["choices"][0]["message"]["content"]
         
-        # Extract JSON from the response
-        json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
-        if not json_match:
-            raise ValueError("Invalid format from LLM: no JSON block found")
+        # Extract JSON from the response - more robust regex
+        json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+        tasks_json = None
+        
+        if json_match:
+            tasks_json = json_match.group(1)
+        else:
+            # Fallback: try to find anything that looks like a JSON array
+            array_match = re.search(r'(\[.*\])', content, re.DOTALL)
+            if array_match:
+                tasks_json = array_match.group(1)
+            else:
+                logger.error(f"Failed to find JSON block in LLM response. Raw content:\n{content}")
+                raise ValueError("Invalid format from LLM: no JSON block found")
 
         try:
-            tasks_data = json.loads(json_match.group(1))
+            tasks_data = json.loads(tasks_json)
+            if not isinstance(tasks_data, list):
+                # If it's a single dict, wrap it in a list
+                if isinstance(tasks_data, dict):
+                    tasks_data = [tasks_data]
+                else:
+                    raise ValueError(f"Expected list of tasks from LLM, got {type(tasks_data).__name__}")
             
-            # Assign a UUID to each task
+            # Assign a UUID to each task, but preserve the original ID for dependency resolution
             for task in tasks_data:
+                orig_id = task.get("task_id")
+                task["original_task_id"] = str(orig_id) if orig_id is not None else None
+                
+                # Normalize arguments/parameters
+                if "arguments" not in task and "parameters" in task:
+                    task["arguments"] = task["parameters"]
+                if "arguments" not in task:
+                    task["arguments"] = {}
+                
+                # Store the original ID (likely a step number) if it's not already there
+                if "step" not in task and orig_id is not None:
+                    try:
+                        task["step"] = int(orig_id)
+                    except (ValueError, TypeError):
+                        pass
+                
                 task["task_id"] = str(uuid.uuid4())
                 
             return tasks_data
         except json.JSONDecodeError as e:
+            logger.error(f"Failed to decode JSON from LLM response. Error: {e}\nAttempted to parse:\n{tasks_json}")
             raise ValueError(f"Failed to decode JSON from LLM response: {e}")
 
 def create_task_planner_node(plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):

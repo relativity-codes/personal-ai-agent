@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { apiFetch } from "@/lib/api/client";
+import { toast } from "sonner";
 import { useEffect, useId, useRef, useState } from "react";
-import { DEMO_APP_USER } from "@/lib/shared/user-demo";
+import Link from "next/link";
+import Image from "next/image";
 
 type MenuLink = { href: string; label: string };
 
@@ -19,10 +22,19 @@ const MENU_SECONDARY: MenuLink[] = [
 ];
 
 export function UserAvatarDropdown() {
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonId = useId();
   const menuId = useId();
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : user?.email?.[0].toUpperCase() || "?";
 
   useEffect(() => {
     if (!open) return;
@@ -45,6 +57,19 @@ export function UserAvatarDropdown() {
     };
   }, [open]);
 
+  const handleLogout = async () => {
+    try {
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
+      logout();
+      setOpen(false);
+      window.location.assign("/");
+    } catch (err) {
+      toast.error("Logout failed");
+    }
+  };
+
+  if (!user) return null;
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -56,12 +81,27 @@ export function UserAvatarDropdown() {
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-100 to-zinc-300 text-xs font-semibold text-zinc-900 dark:from-zinc-800 dark:to-zinc-950 dark:text-zinc-50">
-          {DEMO_APP_USER.initials}
-        </span>
+        {user.avatar_url ? (
+          <div className="relative h-8 w-8 overflow-hidden rounded-full border border-zinc-100 shadow-sm dark:border-zinc-800">
+            <Image
+              src={user.avatar_url}
+              alt={user.name || "User"}
+              fill
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-[11px] font-bold text-white shadow-sm">
+            {initials}
+          </span>
+        )}
         <span className="hidden min-w-0 flex-1 sm:block">
-          <span className="block truncate font-semibold text-zinc-900 dark:text-zinc-50">{DEMO_APP_USER.name}</span>
-          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{DEMO_APP_USER.email}</span>
+          <span className="block truncate font-semibold text-zinc-900 dark:text-zinc-50">
+            {user.name || "User"}
+          </span>
+          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+            {user.email}
+          </span>
         </span>
       </button>
 
@@ -72,13 +112,28 @@ export function UserAvatarDropdown() {
           aria-labelledby={buttonId}
           className="absolute right-0 z-50 mt-2 w-[min(calc(100vw-2rem),280px)] rounded-2xl border border-zinc-200 bg-white py-2 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
         >
-          <div className="flex items-start gap-3 border-b border-zinc-100 px-4 pb-3 pt-2 dark:border-zinc-800 sm:hidden">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-100 to-zinc-300 text-sm font-semibold text-zinc-900 dark:from-zinc-800 dark:to-zinc-950 dark:text-zinc-50">
-              {DEMO_APP_USER.initials}
-            </span>
+          <div className="flex items-start gap-3 border-b border-zinc-100 px-4 pb-3 pt-2 sm:hidden dark:border-zinc-800">
+            {user.avatar_url ? (
+              <div className="relative h-10 w-10 overflow-hidden rounded-full border border-zinc-100 shadow-sm dark:border-zinc-800">
+                <Image
+                  src={user.avatar_url}
+                  alt={user.name || "User"}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                {initials}
+              </span>
+            )}
             <div className="min-w-0">
-              <p className="truncate font-semibold text-zinc-900 dark:text-zinc-50">{DEMO_APP_USER.name}</p>
-              <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">{DEMO_APP_USER.email}</p>
+              <p className="truncate font-semibold text-zinc-900 dark:text-zinc-50">
+                {user.name || "User"}
+              </p>
+              <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
+                {user.email}
+              </p>
             </div>
           </div>
 
@@ -120,10 +175,7 @@ export function UserAvatarDropdown() {
             type="button"
             role="menuitem"
             className="block w-full px-4 py-2.5 text-left text-sm font-semibold text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30"
-            onClick={() => {
-              setOpen(false);
-              window.location.assign("/");
-            }}
+            onClick={handleLogout}
           >
             Sign out
           </button>

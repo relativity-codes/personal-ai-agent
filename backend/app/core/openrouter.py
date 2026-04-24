@@ -1,27 +1,36 @@
-
-import httpx
+import logging
 from typing import List, Dict, Any
+from openai import AsyncOpenAI
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
 class OpenRouterClient:
-    def __init__(self, api_key: str = settings.OPENROUTER_API_KEY, base_url: str = "https://openrouter.ai/api/v1"):
-        self.api_key = api_key
-        self.base_url = base_url
-        self.client = httpx.AsyncClient()
+    def __init__(self, api_key: str = None, base_url: str = None):
+        api_key = api_key or settings.OPENROUTER_API_KEY
+        base_url = base_url or settings.OPENROUTER_BASE_URL
+        
+        if not api_key:
+            logger.warning("OPENROUTER_API_KEY is not set!")
+            
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            default_headers={
+                "HTTP-Referer": settings.HOST,
+                "X-Title": settings.APP_NAME,
+            }
+        )
 
     async def complete(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "anthropic/claude-3.5-sonnet",
-            "messages": messages,
-            **kwargs
-        }
-        response = await self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
-        )
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = await self.client.chat.completions.create(
+                model=kwargs.get("model", settings.OPENROUTER_DEFAULT_MODEL),
+                messages=messages,
+                **{k: v for k, v in kwargs.items() if k != "model"}
+            )
+            # Convert back to the dictionary format expected by the rest of the app
+            return response.model_dump()
+        except Exception as e:
+            logger.error(f"OpenRouter API error: {str(e)}")
+            raise

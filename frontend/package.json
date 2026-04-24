@@ -10,9 +10,13 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.9.0",
     "next": "14.2.18",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "sonner": "^2.0.7",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@types/node": "^20",

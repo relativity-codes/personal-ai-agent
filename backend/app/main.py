@@ -50,7 +50,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts_list)
-app.add_middleware(AuthMiddleware)
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
