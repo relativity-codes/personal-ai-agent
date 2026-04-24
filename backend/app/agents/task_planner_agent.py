@@ -65,8 +65,9 @@ class TaskPlannerAgent:
                         dep_step = int(dep_ref)
                         for t in tasks:
                             if t.get("step") == dep_step:
-                                task["depends_on"][i] = t["task_id"]
-                                found = True
+                                if t["task_id"] != task["task_id"]:
+                                    task["depends_on"][i] = t["task_id"]
+                                    found = True
                                 break
                     except (ValueError, TypeError):
                         pass
@@ -77,17 +78,25 @@ class TaskPlannerAgent:
                     # Try as original task_id if it was a string
                     for t in tasks:
                         if t.get("original_task_id") == str(dep_ref):
-                            task["depends_on"][i] = t["task_id"]
-                            found = True
+                            if t["task_id"] != task["task_id"]:
+                                task["depends_on"][i] = t["task_id"]
+                                found = True
                             break
                     
                     if not found:
                         logger.warning(f"Task {task.get('step')} has an unresolvable dependency: {dep_ref}")
                         # We'll let the next validation step raise the ValueError if it's still missing
 
+                # Filter out self-dependencies and ensure all are known
+                valid_deps = []
                 for dep_id in task.get("depends_on", []):
+                    if dep_id == task["task_id"]:
+                        logger.warning(f"Removing self-dependency for task {task['task_id']}")
+                        continue
                     if dep_id not in all_task_ids:
                         raise ValueError(f"Task {task['task_id']} depends on unknown task {dep_id}")
+                    valid_deps.append(dep_id)
+                task["depends_on"] = valid_deps
 
             # Calculate execution order (topological sort)
             execution_order = self._topological_sort(tasks)
@@ -246,6 +255,7 @@ class TaskPlannerAgent:
                     if in_degree[other_id] == 0:
                         queue.append(other_id)
 
+        if len(order) != len(tasks):
             cycle_nodes = {k for k, v in in_degree.items() if v > 0}
             raise ValueError(f"Circular dependency detected in tasks: {cycle_nodes}")
 

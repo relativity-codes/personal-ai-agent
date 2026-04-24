@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api/client";
 import { toast } from "sonner";
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type MenuLink = { href: string; label: string };
 
@@ -81,11 +82,14 @@ export function UserAvatarDropdown() {
         onClick={() => setOpen((v) => !v)}
       >
         {user.avatar_url ? (
-          <img
-            src={user.avatar_url}
-            alt={user.name || "User"}
-            className="h-8 w-8 rounded-full border border-zinc-100 object-cover shadow-sm dark:border-zinc-800"
-          />
+          <div className="relative h-8 w-8 overflow-hidden rounded-full border border-zinc-100 shadow-sm dark:border-zinc-800">
+            <Image
+              src={user.avatar_url}
+              alt={user.name || "User"}
+              fill
+              className="object-cover"
+            />
+          </div>
         ) : (
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-[11px] font-bold text-white shadow-sm">
             {initials}
@@ -110,11 +114,14 @@ export function UserAvatarDropdown() {
         >
           <div className="flex items-start gap-3 border-b border-zinc-100 px-4 pb-3 pt-2 sm:hidden dark:border-zinc-800">
             {user.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt={user.name || "User"}
-                className="h-10 w-10 rounded-full border border-zinc-100 object-cover shadow-sm dark:border-zinc-800"
-              />
+              <div className="relative h-10 w-10 overflow-hidden rounded-full border border-zinc-100 shadow-sm dark:border-zinc-800">
+                <Image
+                  src={user.avatar_url}
+                  alt={user.name || "User"}
+                  fill
+                  className="object-cover"
+                />
+              </div>
             ) : (
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
                 {initials}
