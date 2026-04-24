@@ -32,3 +32,15 @@ export type IntegrationViewModel = IntegrationDefinition & {
   accountLabel?: string;
   permissionsLabel?: string;
 };
+
+export type McpOauthStatus = {
+  google: {
+    oauth_client_configured: boolean;
+    env_refresh_configured: boolean;
+    authorize_url_path: string;
+    token_exchange_path: string;
+    invoke_oauth_fields: string[];
+  };
+  github: { invoke_oauth_fields: string[] };
+  notion: { invoke_oauth_fields: string[] };
+};

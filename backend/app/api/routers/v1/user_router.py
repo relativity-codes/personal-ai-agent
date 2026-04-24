@@ -25,7 +25,7 @@ class UserRead(BaseModel):
     is_active: Optional[bool] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 class UserUpdate(BaseModel):
     email: EmailStr | None = None
     first_name: str | None = None
@@ -69,7 +69,7 @@ async def update_user(user_id: UUID, user: UserUpdate, db: AsyncSession = Depend
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    updated_user = await user_repo.update(db, db_user.clerk_id, **user.model_dump(exclude_unset=True))
+    updated_user = await user_repo.update(db, db_user.id, **user.model_dump(exclude_unset=True))
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return updated_user

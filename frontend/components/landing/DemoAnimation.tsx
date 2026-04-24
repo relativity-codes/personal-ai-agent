@@ -14,7 +14,8 @@ const DEMO_STEPS = [
 ];
 
 /** Strict height: outer frame must not grow with message content (scroll happens inside). */
-const DEMO_FRAME_HEIGHT = "h-[26rem] max-h-[80vh] shrink-0 overflow-hidden sm:h-[28rem]";
+const DEMO_FRAME_HEIGHT =
+  "h-[26rem] max-h-[80vh] shrink-0 overflow-hidden sm:h-[28rem]";
 
 export function DemoAnimation() {
   const [visibleCount, setVisibleCount] = useState(0);
@@ -46,11 +47,13 @@ export function DemoAnimation() {
         <div
           className={`flex min-h-0 flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 ${DEMO_FRAME_HEIGHT}`}
         >
-          <div className="mb-3 shrink-0 flex items-center gap-2">
+          <div className="mb-3 flex shrink-0 items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-red-400" aria-hidden />
             <span className="h-3 w-3 rounded-full bg-yellow-400" aria-hidden />
             <span className="h-3 w-3 rounded-full bg-green-400" aria-hidden />
-            <span className="ml-2 text-xs text-zinc-400">Personal AI Agent</span>
+            <span className="ml-2 text-xs text-zinc-400">
+              Personal AI Agent
+            </span>
           </div>
 
           <div

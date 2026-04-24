@@ -1,49 +1,41 @@
-import { getApiBaseUrl } from "@/lib/api/client";
-import type { IntegrationId, McpServersResponse } from "./types";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { apiFetch } from "@/lib/api/client";
+import type { IntegrationId, McpServersResponse, McpOauthStatus } from "./types";
+import type { ApiResult } from "@/lib/api/types";
 
-function joinUrl(base: string, path: string): string {
-  const b = base.replace(/\/$/, "");
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${b}${p}`;
+export async function fetchMcpServers(): Promise<McpServersResponse> {
+  const result = await apiFetch<McpServersResponse>("/api/v1/mcp/servers");
+  if (!result.success) {
+    throw new Error(result.error);
+  }
+  return result.data;
 }
 
-export function getMcpAuthUrl(integrationId: IntegrationId): string {
-  return joinUrl(getApiBaseUrl(), `/api/v1/mcp/${integrationId}/auth`);
+export async function disconnectMcpServer(integrationId: IntegrationId): Promise<void> {
+  const result = await apiFetch(`/api/v1/mcp/${integrationId}/disconnect`, {
+    method: "POST",
+  });
+  if (!result.success) {
+    throw new Error(result.error);
+  }
 }
 
-export function getMcpDisconnectUrl(integrationId: IntegrationId): string {
-  return joinUrl(getApiBaseUrl(), `/api/v1/mcp/${integrationId}/disconnect`);
+export async function fetchMcpOauthStatus(): Promise<ApiResult<McpOauthStatus>> {
+  return apiFetch<McpOauthStatus>("/api/v1/mcp/oauth/status");
 }
 
-export function getMcpServersUrl(): string {
-  return joinUrl(getApiBaseUrl(), "/api/v1/mcp/servers");
+export async function fetchGoogleAuthorizeUrl(redirectUri: string): Promise<ApiResult<{ url: string }>> {
+  const encodedUri = encodeURIComponent(redirectUri);
+  return apiFetch<{ url: string }>(`/api/v1/mcp/oauth/google/authorize-url?redirect_uri=${encodedUri}`);
+}
+
+export async function exchangeGoogleCode(code: string, redirectUri: string): Promise<ApiResult<any>> {
+  return apiFetch("/api/v1/mcp/oauth/google/token", {
+    method: "POST",
+    body: JSON.stringify({ code, redirect_uri: redirectUri }),
+  });
 }
 
 export function normalizeServerKey(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "");
-}
-
-export async function fetchMcpServers(): Promise<McpServersResponse> {
-  const res = await fetch(getMcpServersUrl(), {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to load integrations (${res.status})`);
-  }
-
-  return (await res.json()) as McpServersResponse;
-}
-
-export async function disconnectMcpServer(integrationId: IntegrationId): Promise<void> {
-  const res = await fetch(getMcpDisconnectUrl(integrationId), {
-    method: "POST",
-    headers: { Accept: "application/json" },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to disconnect (${res.status})`);
-  }
 }

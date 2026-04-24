@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
-from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, task_router, session_router
+from app.api.middleware import AuthMiddleware
+from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, task_router, session_router, auth
 from app.api.websocket import chat as ws_chat
 from app.config import settings
 from app.core.openrouter import OpenRouterClient
@@ -40,6 +41,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -48,6 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts_list)
+app.add_middleware(AuthMiddleware)
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
@@ -61,6 +64,7 @@ app.include_router(plan_router.router, prefix="/api/v1/plans", tags=["plans"])
 app.include_router(task_router.router, prefix="/api/v1/tasks", tags=["tasks"])
 app.include_router(session_router.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(ws_chat.router, prefix="/ws", tags=["websocket"])
+app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 
 
 @app.get("/health")
@@ -99,7 +103,13 @@ async def serve_frontend(full_path: str):
     if os.path.isfile(static_file_path):
         return FileResponse(static_file_path)
     
-    # 2. Otherwise, serve index.html for root or SPA routing
+    # 2. If it's a directory, check for index.html within it (for trailingSlash: true)
+    if os.path.isdir(static_file_path):
+        dir_index = os.path.join(static_file_path, "index.html")
+        if os.path.isfile(dir_index):
+            return FileResponse(dir_index)
+
+    # 3. Otherwise, serve root index.html for SPA routing
     index_path = os.path.join("static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
