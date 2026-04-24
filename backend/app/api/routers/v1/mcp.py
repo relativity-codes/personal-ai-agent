@@ -1,13 +1,11 @@
 from __future__ import annotations
-
 import logging
 from typing import Annotated, Any
-
 from fastapi import APIRouter, Body, Depends, HTTPException
-
 from app.api.deps import get_current_user
 from app.mcp.schema import InvokeRequest, InvokeResponse
-from app.mcp.registry import mcp_registry
+# from app.mcp.registry import mcp_registry
+from app.mcp_alt.registry import mcp_alt_registry
 from app.utils.logger import log_exception
 
 logger = logging.getLogger(__name__)
@@ -95,13 +93,13 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
 @router.get("/servers")
 async def list_mcp_servers(user: dict = Depends(get_current_user)) -> dict[str, Any]:
     logger.debug("mcp.list_servers user_id=%s", user.get("user_id"))
-    return {"servers": mcp_registry.list_servers()}
+    return {"servers": mcp_alt_registry.list_servers()}
 
 
 @router.get("/tools")
 async def list_mcp_tools(user: dict = Depends(get_current_user)) -> dict[str, Any]:
     logger.debug("mcp.list_tools user_id=%s", user.get("user_id"))
-    integrations = await mcp_registry.list_all_tools()
+    integrations = await mcp_alt_registry.list_all_tools()
     return {"integrations": integrations}
 
 
@@ -113,15 +111,6 @@ async def invoke_mcp_tool(
     ],
     user: dict = Depends(get_current_user),
 ) -> InvokeResponse:
-    server = mcp_registry.get(body.server_id)
-    if server is None:
-        raise HTTPException(status_code=404, detail=f"Unknown server_id: {body.server_id}")
-    tool_names = {t.name for t in await server.list_tools()}
-    if body.tool not in tool_names:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown tool {body.tool!r} for server {body.server_id!r}",
-        )
     logger.info(
         "mcp.invoke",
         extra={
@@ -131,7 +120,13 @@ async def invoke_mcp_tool(
         },
     )
     try:
-        raw = await server.invoke(body.tool, body.arguments, body.oauth)
+        user_id = user.get("user_id")
+        raw = await mcp_alt_registry.invoke_tool(
+            body.server_id, 
+            body.tool, 
+            body.arguments, 
+            user_id=user_id
+        )
     except Exception as exc:
         log_exception(
             logger, 
@@ -141,14 +136,27 @@ async def invoke_mcp_tool(
         )
         raise HTTPException(
             status_code=500,
-            detail="Tool invocation failed; see server logs.",
+            detail=f"Tool invocation failed: {str(exc)}",
         ) from exc
-    ok = bool(raw.get("ok")) if isinstance(raw, dict) else False
-    err = raw.get("error") if isinstance(raw, dict) else None
+    
+    # Handle the result format from the new mcp-python-sdk
+    # The result is often a CallToolResult object or a dict
+    result_data = raw
+    if hasattr(raw, 'content'):
+        # If it's a CallToolResult, extract the content
+        result_data = [
+            {"type": c.type, "text": c.text} if hasattr(c, 'text') else str(c)
+            for c in raw.content
+        ]
+    
+    ok = True
+    if isinstance(raw, dict) and "ok" in raw:
+        ok = bool(raw["ok"])
+    
     return InvokeResponse(
         ok=ok,
         server_id=body.server_id,
         tool=body.tool,
-        result=raw if isinstance(raw, dict) else {"value": raw},
-        error=str(err) if err else None,
+        result=result_data,
+        error=None,
     )

@@ -5,5 +5,6 @@ from app.db.models.plan import ExecutionPlan
 from app.db.models.session import Session
 from app.db.models.task import Task
 from app.db.models.user import User
+from app.db.models.mcp_credential import MCPCredential
 
-__all__ = ["Base", "User", "ExecutionPlan", "AuditLog", "Session", "ChatHistory", "Task"]
+__all__ = ["Base", "User", "ExecutionPlan", "AuditLog", "Session", "ChatHistory", "Task", "MCPCredential"]

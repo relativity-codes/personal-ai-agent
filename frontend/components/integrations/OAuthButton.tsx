@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { IntegrationId } from "@/lib/integrations/types";
-import { fetchGoogleAuthorizeUrl } from "@/lib/integrations/api";
+import { fetchAuthorizeUrl } from "@/lib/integrations/api";
 
 type Props = {
   integrationId: IntegrationId;
@@ -15,18 +15,29 @@ export function OAuthButton({ integrationId, disabled, busy: busyProp }: Props) 
   const busy = busyProp || busyState;
 
   const handleClick = async () => {
-    if (integrationId === "calendar" || integrationId === "gmail") {
+    // Map integration ID to OAuth provider name
+    const providerMap: Record<string, string> = {
+      calendar: "google",
+      gmail: "google",
+      github: "github",
+      notion: "notion",
+    };
+
+    const provider = providerMap[integrationId];
+
+    if (provider) {
       setBusyState(true);
-      const redirectUri = `${window.location.origin}/integrations/callback`;
-      const res = await fetchGoogleAuthorizeUrl(redirectUri);
+      // We pass the provider as a query param so the callback page knows who to exchange with
+      const redirectUri = `${window.location.origin}/integrations/callback?provider=${provider}`;
+      const res = await fetchAuthorizeUrl(provider, redirectUri);
+      
       if (res.success) {
         window.location.assign(res.data.url);
       } else {
-        alert(`Failed to get auth URL: ${res.error}`);
+        alert(`Failed to get auth URL for ${provider}: ${res.error}`);
         setBusyState(false);
       }
     } else {
-      // Handle other integrations (placeholder for now)
       alert(`${integrationId} auth not implemented yet`);
     }
   };

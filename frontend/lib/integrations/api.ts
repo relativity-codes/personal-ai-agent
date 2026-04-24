@@ -24,13 +24,13 @@ export async function fetchMcpOauthStatus(): Promise<ApiResult<McpOauthStatus>> 
   return apiFetch<McpOauthStatus>("/api/v1/mcp/oauth/status");
 }
 
-export async function fetchGoogleAuthorizeUrl(redirectUri: string): Promise<ApiResult<{ url: string }>> {
+export async function fetchAuthorizeUrl(provider: string, redirectUri: string): Promise<ApiResult<{ url: string }>> {
   const encodedUri = encodeURIComponent(redirectUri);
-  return apiFetch<{ url: string }>(`/api/v1/mcp/oauth/google/authorize-url?redirect_uri=${encodedUri}`);
+  return apiFetch<{ url: string }>(`/api/v1/mcp/oauth/${provider}/authorize-url?redirect_uri=${encodedUri}`);
 }
 
-export async function exchangeGoogleCode(code: string, redirectUri: string): Promise<ApiResult<any>> {
-  return apiFetch("/api/v1/mcp/oauth/google/token", {
+export async function exchangeOAuthCode(provider: string, code: string, redirectUri: string): Promise<ApiResult<any>> {
+  return apiFetch(`/api/v1/mcp/oauth/${provider}/token`, {
     method: "POST",
     body: JSON.stringify({ code, redirect_uri: redirectUri }),
   });

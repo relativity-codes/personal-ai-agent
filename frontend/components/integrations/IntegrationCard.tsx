@@ -20,10 +20,15 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
   const [busy, setBusy] = useState<"disconnect" | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
 
-  const statusDetail = useMemo(() => getIntegrationStatusDetail(model), [model]);
+  const statusDetail = useMemo(
+    () => getIntegrationStatusDetail(model),
+    [model],
+  );
 
   async function handleDisconnect() {
-    const ok = window.confirm(`Disconnect ${model.title}? This may remove access for automations that rely on it.`);
+    const ok = window.confirm(
+      `Disconnect ${model.title}? This may remove access for automations that rely on it.`,
+    );
     if (!ok) return;
 
     setBusy("disconnect");
@@ -32,7 +37,10 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
       await disconnectMcpServer(model.id);
       await onRefresh();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not disconnect. Please try again.";
+      const message =
+        e instanceof Error
+          ? e.message
+          : "Could not disconnect. Please try again.";
       setBanner(message);
     } finally {
       setBusy(null);
@@ -49,7 +57,7 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
           <div className="flex min-w-0 gap-4">
             <IntegrationLogo id={model.id} />
             <div className="min-w-0">
-              <h2 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-lg">
+              <h2 className="text-base font-semibold tracking-tight text-zinc-900 sm:text-lg dark:text-zinc-50">
                 {model.title}
               </h2>
               <p className="mt-2 max-w-prose text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
@@ -59,22 +67,28 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
           </div>
         </div>
 
-        <div className="mt-6 space-y-3 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900/40 sm:p-5">
+        <div className="mt-6 space-y-3 rounded-xl bg-zinc-50 p-4 sm:p-5 dark:bg-zinc-900/40">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-zinc-700 dark:text-zinc-200">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <span className="font-medium text-zinc-900 dark:text-zinc-50">Status</span>
+                <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                  Status
+                </span>
                 <ConnectionStatusBadge configured={model.configured} />
               </div>
               {model.configured && statusDetail ? (
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{statusDetail}</p>
+                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                  {statusDetail}
+                </p>
               ) : null}
             </div>
           </div>
 
           {model.configured && model.permissionsLabel ? (
             <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-              <span className="font-medium text-zinc-800 dark:text-zinc-100">Permissions: </span>
+              <span className="font-medium text-zinc-800 dark:text-zinc-100">
+                Permissions:{" "}
+              </span>
               {model.permissionsLabel}
             </p>
           ) : null}
@@ -83,9 +97,10 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Last sync:{" "}
               <time dateTime={model.lastSync}>
-                {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(
-                  new Date(model.lastSync),
-                )}
+                {new Intl.DateTimeFormat("en-US", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(model.lastSync))}
               </time>
             </p>
           ) : null}
@@ -103,11 +118,21 @@ export function IntegrationCard({ model, onConfigure, onRefresh }: Props) {
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           {model.configured ? (
             <>
-              <ConfigureButton onClick={() => onConfigure(model)} disabled={busy !== null} />
-              <DisconnectButton onClick={() => void handleDisconnect()} busy={busy === "disconnect"} />
+              <ConfigureButton
+                onClick={() => onConfigure(model)}
+                disabled={busy !== null}
+              />
+              <DisconnectButton
+                onClick={() => void handleDisconnect()}
+                busy={busy === "disconnect"}
+              />
             </>
           ) : (
-            <OAuthButton integrationId={model.id} busy={false} disabled={busy !== null} />
+            <OAuthButton
+              integrationId={model.id}
+              busy={false}
+              disabled={busy !== null}
+            />
           )}
         </div>
       </div>

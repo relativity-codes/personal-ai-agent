@@ -76,3 +76,60 @@ class SessionRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+from enum import Enum
+
+# MCP Service IDs
+class MCPServiceId(str, Enum):
+    GITHUB = "github"
+    NOTION = "notion"
+    GOOGLE = "google"
+    GMAIL = "gmail"
+    CALENDAR = "calendar"
+
+from typing import Annotated, Union, Literal
+
+# MCPCredential schemas
+class GitHubCredentials(BaseModel):
+    token: str
+
+class NotionCredentials(BaseModel):
+    token: str
+
+class GoogleCredentials(BaseModel):
+    client_id: str
+    client_secret: str
+    refresh_token: Optional[str] = None
+    access_token: Optional[str] = None
+    expires_in: Optional[datetime] = None
+
+class GitHubCredentialCreate(BaseModel):
+    server_id: Literal[MCPServiceId.GITHUB]
+    credentials: GitHubCredentials
+
+class NotionCredentialCreate(BaseModel):
+    server_id: Literal[MCPServiceId.NOTION]
+    credentials: NotionCredentials
+
+class GoogleCredentialCreate(BaseModel):
+    server_id: Literal[MCPServiceId.GOOGLE, MCPServiceId.GMAIL, MCPServiceId.CALENDAR]
+    credentials: GoogleCredentials
+
+MCPCredentialCreate = Annotated[
+    Union[GitHubCredentialCreate, NotionCredentialCreate, GoogleCredentialCreate],
+    Field(discriminator='server_id')
+]
+
+class MCPCredentialUpdate(BaseModel):
+    credentials: Optional[Dict[str, Any]] = None
+
+class MCPCredentialRead(BaseModel):
+    id: UUID
+    user_id: UUID
+    server_id: MCPServiceId
+    credentials: Dict[str, Any]
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True

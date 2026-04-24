@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { exchangeGoogleCode } from "@/lib/integrations/api";
+import { exchangeOAuthCode } from "@/lib/integrations/api";
 
 function CallbackContent() {
   const searchParams = useSearchParams();
@@ -12,16 +12,25 @@ function CallbackContent() {
 
   useEffect(() => {
     const code = searchParams.get("code");
+    const provider = searchParams.get("provider");
+
     if (!code) {
       setError("No authorization code found in URL.");
       return;
     }
 
+    if (!provider) {
+      setError("No provider specified in callback.");
+      return;
+    }
+
     const exchange = async () => {
-      const redirectUri = `${window.location.origin}/integrations/callback`;
-      const res = await exchangeGoogleCode(code, redirectUri);
+      // Must match exactly what was sent to fetchAuthorizeUrl
+      const redirectUri = `${window.location.origin}/integrations/callback?provider=${provider}`;
+      const res = await exchangeOAuthCode(provider, code, redirectUri);
+      
       if (res.success) {
-        setStatus("Authorization successful! Redirecting...");
+        setStatus(`Authorization with ${provider} successful! Redirecting...`);
         setTimeout(() => router.push("/integrations"), 1500);
       } else {
         setError(res.error);
