@@ -16,6 +16,8 @@ export function useChat(initialSessionId?: string) {
   const [sessionId, setSessionId] = useState<string | undefined>(initialSessionId);
   const [pending, setPending] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [currentAgent, setCurrentAgent] = useState<string | null>(null);
+
   const wsRef = useRef<ChatWebSocket | null>(null);
   const assistantIdRef = useRef<string | null>(null);
 
@@ -24,11 +26,25 @@ export function useChat(initialSessionId?: string) {
 
     const ws = new ChatWebSocket({
       onSessionCreated: (sid) => setSessionId(sid),
-      onStep: () => setTyping(true),
+      onStep: (step) => {
+        setTyping(true);
+        // Extract node name from step object (e.g., { "intent": { ... } } -> "intent")
+        const nodeName = Object.keys(step)[0];
+        if (nodeName) {
+          const agentLabels: Record<string, string> = {
+            "intent": "Analyzing Intent...",
+            "task_planner": "Planning Tasks...",
+            "action": "Executing Actions...",
+            "response": "Generating Response...",
+          };
+          setCurrentAgent(agentLabels[nodeName] || "Processing...");
+        }
+      },
       onFinalResponse: (message, sid) => {
         setSessionId(sid);
         setTyping(false);
         setPending(false);
+        setCurrentAgent(null);
         const id = assistantIdRef.current;
         if (id) {
           setMessages((prev) =>
@@ -48,6 +64,7 @@ export function useChat(initialSessionId?: string) {
         console.warn("Chat WS:", err);
         setTyping(false);
         setPending(false);
+        setCurrentAgent(null);
         const id = assistantIdRef.current;
         if (id) {
           setMessages((prev) =>
@@ -66,6 +83,7 @@ export function useChat(initialSessionId?: string) {
       },
       onClose: () => {
         setTyping(false);
+        setCurrentAgent(null);
       },
     });
 
@@ -118,6 +136,7 @@ export function useChat(initialSessionId?: string) {
       };
       setMessages((prev) => [...prev, userMsg]);
       setPending(true);
+      setCurrentAgent("Connecting...");
 
       const placeholderId = nextId();
       assistantIdRef.current = placeholderId;
@@ -160,6 +179,7 @@ export function useChat(initialSessionId?: string) {
       } finally {
         setPending(false);
         setTyping(false);
+        setCurrentAgent(null);
       }
     },
     [pending, sessionId]
@@ -168,7 +188,8 @@ export function useChat(initialSessionId?: string) {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setSessionId(undefined);
+    setCurrentAgent(null);
   }, []);
 
-  return { messages, sessionId, pending, typing, sendMessage, clearMessages };
+  return { messages, sessionId, pending, typing, currentAgent, sendMessage, clearMessages };
 }

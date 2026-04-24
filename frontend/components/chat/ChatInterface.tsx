@@ -12,7 +12,7 @@ export function ChatInterface() {
   const initialSessionId = searchParams.get("session_id") ?? undefined;
   const initialPrompt = searchParams.get("prompt") ?? undefined;
 
-  const { messages, pending, typing, sendMessage } = useChat(initialSessionId);
+  const { messages, pending, typing, currentAgent, sendMessage } = useChat(initialSessionId);
   const [started, setStarted] = useState(false);
 
   // Auto-send preset prompt from Quick Actions
@@ -43,6 +43,8 @@ export function ChatInterface() {
         )}
         <ChatInput onSend={handleSend} disabled={pending} />
         <p className="mt-2 text-center text-xs text-zinc-400">
+          {typing ? (currentAgent || "Processing...") : "Online"}
+          <br />
           Press{" "}
           <kbd className="rounded border border-zinc-200 px-1 font-mono dark:border-zinc-700">
             Enter
