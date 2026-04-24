@@ -7,6 +7,10 @@ import jwt
 from app.config import settings
 from app.db.repositories.user_repository import UserRepository
 from app.db.session import async_session_factory
+from app.utils.logger import log_exception
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(
@@ -18,9 +22,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         allowed_paths = ["/", "/docs", "/redoc", "/openapi.json"]
         
         if (
-            settings.DEV_AUTH_BYPASS or
-            path in allowed_paths or 
+            not path.startswith("/api") or
             any(path.startswith(prefix) for prefix in allowed_prefixes) or
+            path in allowed_paths or
             any(path.endswith(ext) for ext in [".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".woff", ".woff2"])
         ):
             return await call_next(request)
@@ -30,7 +34,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not access_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not authenticated",
+                detail="Not authenticated, Please login again",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -41,16 +45,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
             user_id: str = payload.get("sub")
             if user_id is None:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token, Please login again"
                 )
-        except jwt.PyJWTError:
+        except jwt.PyJWTError as e:
+            log_exception(logger, e, context="JWT decode failed in AuthMiddleware")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token, Please login again"
             )
 
         async with async_session_factory() as session:
             user = await UserRepository.get_by_id(session, user_id)
             if not user:
+                logger.warning(f"User {user_id} from token not found in database")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
                 )

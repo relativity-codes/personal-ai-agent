@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
+import { ActivityList } from "@/components/activity/ActivityList";
 
 export const metadata: Metadata = {
   title: "Activity",
-  description: "User activity log.",
+  description: "Your conversation history and AI agent activities.",
 };
 
 export default function ActivityPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-        Activity feed will connect to <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">/api/v1/activity</code> when available.
-      </p>
+    <div className="mx-auto max-w-4xl px-4 py-10">
+      <header className="mb-10">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Activity Feed</h1>
+        <p className="mt-2 text-zinc-500 dark:text-zinc-400">
+          A log of your recent interactions and tasks performed by your AI agent.
+        </p>
+      </header>
+
+      <ActivityList />
     </div>
   );
 }

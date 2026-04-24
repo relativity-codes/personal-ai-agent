@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     APP_NAME: str = config("APP_NAME", default="Personal AI Agent")
     APP_ENV: str = config("APP_ENV", default="development")
     DEBUG: bool = config("DEBUG", default=True, cast=bool)
-    DEV_AUTH_BYPASS: bool = config("DEV_AUTH_BYPASS", default=True, cast=bool)
+    DEV_AUTH_BYPASS: bool = config("DEV_AUTH_BYPASS", default=False, cast=bool)
     # Stable UUID string for the seeded dev user (see app.db.session._ensure_dev_user_row).
     DEV_USER_INTERNAL_ID: str = config("DEV_USER_INTERNAL_ID", default="11111111-1111-1111-1111-111111111111")
 
@@ -96,7 +96,7 @@ class Settings(BaseSettings):
 
     OPENROUTER_API_KEY: str = config("OPENROUTER_API_KEY", default="")
     OPENROUTER_BASE_URL: str = config("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
-    OPENROUTER_DEFAULT_MODEL: str = config("OPENROUTER_DEFAULT_MODEL", default="anthropic/claude-3.5-sonnet")
+    OPENROUTER_DEFAULT_MODEL: str = config("OPENROUTER_DEFAULT_MODEL", default="openai/gpt-3.5-turbo")
     OPENROUTER_FALLBACK_MODELS: str = config("OPENROUTER_FALLBACK_MODELS", default="openai/gpt-4o,meta-llama/llama-3-70b-instruct")
 
     @computed_field

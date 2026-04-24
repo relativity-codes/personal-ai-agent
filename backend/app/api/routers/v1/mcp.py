@@ -8,6 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from app.api.deps import get_current_user
 from app.mcp.schema import InvokeRequest, InvokeResponse
 from app.mcp.registry import mcp_registry
+from app.utils.logger import log_exception
 
 logger = logging.getLogger(__name__)
 
@@ -132,10 +133,11 @@ async def invoke_mcp_tool(
     try:
         raw = await server.invoke(body.tool, body.arguments, body.oauth)
     except Exception as exc:
-        logger.exception(
-            "mcp.invoke crashed server_id=%s tool=%s",
-            body.server_id,
-            body.tool,
+        log_exception(
+            logger, 
+            exc, 
+            context=f"MCP invocation crashed: server_id={body.server_id} tool={body.tool}",
+            extra_data={"user_id": user.get("user_id"), "arguments": body.arguments}
         )
         raise HTTPException(
             status_code=500,

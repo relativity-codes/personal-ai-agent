@@ -1,15 +1,16 @@
 from app.core.security import claims_to_profile
-
+import pytest
 
 def test_claims_to_profile_email_field():
     claims = {"sub": "user_2abc", "email": "hello@example.com", "name": "Hello"}
     p = claims_to_profile(claims)
-    assert p["clerk_sub"] == "user_2abc"
+    assert p["google_id"] == "user_2abc"
     assert p["email"] == "hello@example.com"
     assert p["name"] == "Hello"
 
 
 def test_claims_to_profile_email_addresses_primary():
+    # Mocking a Clerk-like claim structure but mapping to google_id
     claims = {
         "sub": "user_xyz",
         "primary_email_address_id": "ea_1",
@@ -19,7 +20,7 @@ def test_claims_to_profile_email_addresses_primary():
         ],
     }
     p = claims_to_profile(claims)
-    assert p["clerk_sub"] == "user_xyz"
+    assert p["google_id"] == "user_xyz"
     assert p["email"] == "primary@x.com"
 
 

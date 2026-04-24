@@ -1,6 +1,10 @@
 import asyncio
 import time
 from typing import Dict, Any, List
+import logging
+from app.utils.logger import log_exception
+
+logger = logging.getLogger(__name__)
 
 from app.agents.state import AgentState, TaskStatus
 from app.mcp.base import MCPRegistry
@@ -31,7 +35,7 @@ class ActionAgent:
         
         try:
             # Get MCP client for user
-            principal = state.get("clerk_sub") or state["user_id"]
+            principal = state.get("google_id") or state["user_id"]
             mcp_client = self.mcp_registry.get_client(mcp_server, principal)
             
             # Execute with timeout
@@ -50,10 +54,12 @@ class ActionAgent:
             
         except asyncio.TimeoutError:
             error = f"Timeout after 30 seconds"
+            logger.warning(f"Task {task_id} ({mcp_server}/{tool}) timed out")
             state["failed_tasks"].append({"task_id": task_id, "error": error})
             return state
             
         except Exception as e:
+            log_exception(logger, e, context=f"Execution failed for task {task_id} ({mcp_server}/{tool})")
             error = str(e)
             state["failed_tasks"].append({"task_id": task_id, "error": error})
             return state
