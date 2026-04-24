@@ -18,3 +18,7 @@ out/
 .DS_Store
 .idea/
 .vscode/
+backend/static
+backend/static/
+backend/static/*
+.sixth
