@@ -78,27 +78,30 @@ def create_managerial_graph() -> StateGraph:
     # --- Routers (IMPORTANT: separate logic) ---
 
     def route_from_intent(state: AgentState):
-        if state.intent.requires_planning:
+        intent = state.get("validated_intent") or {}
+        if intent.get("requires_planning"):
             return "planner"
         return "response"
 
     def route_from_planner(state: AgentState):
-        if state.plan is None:
+        tasks = state.get("tasks", [])
+        if not tasks:
             return "response"
 
-        if state.current_step >= len(state.plan.steps):
+        if state.get("current_task_index", 0) >= len(tasks):
             return "response"
 
         return "action"
 
     def route_from_action(state: AgentState):
-        if state.error:
+        if state.get("error"):
             return "response"
-
-        if state.current_step >= len(state.plan.steps):
-            return "response"
-
-        return "planner"
+        
+        tasks = state.get("tasks", [])
+        if state.get("current_task_index", 0) < len(tasks):
+            state["current_task_index"] += 1
+            return "planner"
+        return "response"
 
     # --- Edges ---
     workflow.add_conditional_edges(

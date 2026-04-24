@@ -134,6 +134,7 @@ Return ONLY:
       "title": "Login button broken",
       "repo": "org/frontend"
     },
+    "requires_planning": false,
     "required_mcp_servers": ["github"]
   },
   "needs_clarification": false,
