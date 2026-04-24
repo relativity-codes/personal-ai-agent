@@ -58,7 +58,7 @@ export function UserAvatarDropdown() {
 
   const handleLogout = async () => {
     try {
-      await apiFetch("/auth/logout", { method: "POST" });
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
       logout();
       setOpen(false);
       window.location.assign("/");
