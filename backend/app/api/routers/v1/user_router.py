@@ -4,6 +4,7 @@ from app.db.database import get_db
 from app.db.repositories.user_repository import UserRepository
 from app.db.models.user import User
 from pydantic import BaseModel, EmailStr
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
