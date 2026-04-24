@@ -39,6 +39,7 @@ mkdir -p $STATIC_DIR
 cp -r frontend/out/* $STATIC_DIR/
 echo "Frontend files copied to $STATIC_DIR."
 
+
 echo "--- Starting Single-App Server ---"
 echo "The application will be available at http://localhost:8000"
 (cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000)
