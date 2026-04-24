@@ -38,7 +38,7 @@ export function ProfileSettingsView() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await apiFetch("/users/me", {
+      await apiFetch("/api/v1/users/me", {
         method: "PATCH",
         body: JSON.stringify({
           name,

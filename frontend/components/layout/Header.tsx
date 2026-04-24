@@ -12,7 +12,7 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await apiFetch("/auth/logout", { method: "POST" });
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
       logout();
       toast.success("Logged out successfully");
       router.push("/");
