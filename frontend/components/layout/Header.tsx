@@ -5,6 +5,7 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -44,11 +45,14 @@ export function Header() {
               </span>
             </div>
             {user.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt={user.name || "User"}
-                className="h-9 w-9 rounded-full border border-zinc-200 object-cover shadow-sm"
-              />
+              <div className="relative h-9 w-9 overflow-hidden rounded-full border border-zinc-200 shadow-sm">
+                <Image
+                  src={user.avatar_url}
+                  alt={user.name || "User"}
+                  fill
+                  className="object-cover"
+                />
+              </div>
             ) : (
               <div className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 shadow-sm">
                 <UserIcon className="h-5 w-5 text-zinc-400" />

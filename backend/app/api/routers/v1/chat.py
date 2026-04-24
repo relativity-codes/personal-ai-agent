@@ -39,10 +39,11 @@ async def chat(
     chat_history_repo: ChatHistoryRepository = Depends(),
 ) -> ChatResponse:
     session_id = request.session_id
-    user_id = user.get("user_id")
-
-    if not user_id:
+    user_id_raw = user.get("user_id")
+    if not user_id_raw:
         raise HTTPException(status_code=403, detail="User ID not found")
+    
+    user_id = parse_uuid(user_id_raw, "user_id")
 
     if session_id is None:
         # Create a new session if one is not provided
@@ -52,12 +53,13 @@ async def chat(
         # Verify that the session belongs to the current user
         session = await SessionRepository.get_by_id(db, session_id)
         if not session or session.user_id != user_id:
+            logger.warning(f"Session {session_id} does not belong to user {user_id}")
             raise HTTPException(status_code=403, detail="Invalid session ID")
 
     chat_history = await chat_history_repo.get_history(db, str(session_id))
     
     # Fetch full user context to provide to agents
-    user_row = await UserRepository.get_by_id(db, parse_uuid(user_id, "user_id"))
+    user_row = await UserRepository.get_by_id(db, user_id)
     user_context = {
         "name": user_row.name if user_row else None,
         "email": user_row.email if user_row else None,

@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api/client";
 import { toast } from "sonner";
 import { inputClass, labelClass, readOnlyBoxClass } from "../form-classes";
 import { SettingsSectionCard } from "../SettingsSectionCard";
+import Image from "next/image";
 
 export function ProfileSettingsView() {
   const { user, fetchUser } = useAuth();
@@ -58,14 +59,19 @@ export function ProfileSettingsView() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   const initials = name
-    ? name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+    ? name
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
     : user.email?.[0].toUpperCase() || "?";
 
   return (
@@ -85,11 +91,14 @@ export function ProfileSettingsView() {
       >
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           {user.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt={user.name || "User"}
-              className="h-24 w-24 rounded-2xl border border-zinc-200 object-cover shadow-sm dark:border-zinc-800"
-            />
+            <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800">
+              <Image
+                src={user.avatar_url}
+                alt={user.name || "User"}
+                fill
+                className="object-cover"
+              />
+            </div>
           ) : (
             <div
               className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-gradient-to-br from-indigo-500 to-purple-600 text-2xl font-bold text-white shadow-inner dark:border-zinc-800"
@@ -107,7 +116,7 @@ export function ProfileSettingsView() {
             />
             <button
               type="button"
-              className="inline-flex w-full min-h-[44px] items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-600 sm:w-auto"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-sm transition hover:bg-zinc-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 sm:w-auto dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900 dark:focus-visible:outline-zinc-600"
               onClick={() => fileInputRef.current?.click()}
             >
               Change Avatar
@@ -208,7 +217,7 @@ export function ProfileSettingsView() {
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex w-full min-h-[44px] items-center justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:outline-zinc-200 sm:w-auto disabled:opacity-50"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:opacity-50 sm:w-auto dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:outline-zinc-200"
             >
               {isSaving ? "Saving..." : "Save Changes"}
             </button>
