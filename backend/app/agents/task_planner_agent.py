@@ -231,7 +231,7 @@ class TaskPlannerAgent:
         )
 
         if all_completed:
-            state["final_response"] = "Plan execution completed"
+            pass
 
         return state
 

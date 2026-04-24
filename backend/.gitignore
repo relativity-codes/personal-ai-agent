@@ -18,7 +18,13 @@ out/
 .DS_Store
 .idea/
 .vscode/
-static
-static/
-static/*
 .sixth
+./static
+static/
+static/404.html
+static/index.html
+static/logo.svg
+static/index.txt
+static/*
+./static/
+./static/*

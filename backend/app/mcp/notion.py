@@ -21,17 +21,26 @@ _RE_TAIL_32 = re.compile(r"([a-f0-9]{32})(?:\?[^#]*)?(?:#.*)?$", re.I)
 def normalize_notion_resource_id(raw: str) -> str:
     """Return a hyphenated UUID string accepted by the Notion API."""
     s = (raw or "").strip()
-    s = s.split("?")[0].split("#")[0].rstrip("/")
+    if not s:
+        raise ValueError("Notion ID is empty.")
+    
+    # Remove quotes if present
     while len(s) >= 2 and s[0] == s[-1] == '"':
         s = s[1:-1].strip()
+    
+    # Try parsing as a direct UUID first
     try:
+        # uuid.UUID handles both hyphenated and non-hyphenated 32-char hex
         return str(uuid.UUID(s))
     except ValueError:
         pass
-    m = _RE_TAIL_32.search(s)
-    if not m:
-        raise ValueError("Notion ID is not a valid UUID or 32-hex string.")
-    return str(uuid.UUID(m.group(1).lower()))
+        
+    # Search for any 32-character hex sequence in the string (handles URLs, etc.)
+    m = re.search(r"([a-f0-9]{32})", s, re.I)
+    if m:
+        return str(uuid.UUID(m.group(1).lower()))
+        
+    raise ValueError(f"Could not parse a valid 32-character Notion ID from: {raw}")
 
 
 def _notion_error_hint(
@@ -89,7 +98,9 @@ class NotionMCPServer(MCPServer):
         self._token = (settings.NOTION_TOKEN or "").strip()
 
     def _effective_token(self, oauth: MCPInvokeOAuth | None) -> str:
-        return (oauth.notion_token or "").strip() or self._token
+        if oauth and oauth.notion_token:
+            return oauth.notion_token.strip()
+        return self._token
 
     def is_configured(self) -> bool:
         return bool(self._token)

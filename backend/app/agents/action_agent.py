@@ -1,25 +1,34 @@
 import asyncio
 import time
-from typing import Dict, Any, List
+import json
 import logging
+from typing import Dict, Any, List
+
 from app.utils.logger import log_exception
-
-logger = logging.getLogger(__name__)
-
 from app.agents.state import AgentState, TaskStatus
 from app.mcp.base import MCPRegistry
 from app.services.cache_service import redis_client
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
 from app.db.repositories.plan_repository import PlanRepository
+from app.core.openrouter import OpenRouterClient
+from app.core.prompts import (
+    ACTION_GITHUB_PARSER_PROMPT,
+    ACTION_CALENDAR_PARSER_PROMPT,
+    ACTION_NOTION_PARSER_PROMPT,
+    ACTION_GMAIL_PARSER_PROMPT
+)
+
+logger = logging.getLogger(__name__)
 
 class ActionAgent:
     """
     Action Agent: Executes MCP server calls and updates task status.
     """
     
-    def __init__(self, mcp_registry: MCPRegistry, user_repo: UserRepository, audit_repo: AuditRepository, plan_repo: PlanRepository):
+    def __init__(self, mcp_registry: MCPRegistry, openrouter: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository, plan_repo: PlanRepository):
         self.mcp_registry = mcp_registry
+        self.openrouter = openrouter
         self.user_repo = user_repo
         self.audit_repo = audit_repo
         self.plan_repo = plan_repo
@@ -55,6 +64,39 @@ class ActionAgent:
                     plan["task_errors"][task_id] = error
                 await redis_client.set_json(f"plan:{plan_id}", plan, ttl=3600)
 
+    async def _parse_result(self, mcp_server: str, result: Any) -> Any:
+        """
+        Uses a specialized parser prompt to clean up and structure tool output.
+        """
+        parser_prompts = {
+            "github": ACTION_GITHUB_PARSER_PROMPT,
+            "google_calendar": ACTION_CALENDAR_PARSER_PROMPT,
+            "notion": ACTION_NOTION_PARSER_PROMPT,
+            "gmail": ACTION_GMAIL_PARSER_PROMPT,
+        }
+        
+        prompt = parser_prompts.get(mcp_server)
+        if not prompt:
+            logger.info(f"No specialized parser for {mcp_server}, returning raw result")
+            return result
+
+        try:
+            response = await self.openrouter.complete(
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": f"Parse and structure this raw tool result:\n{json.dumps(result)}"},
+                ],
+                temperature=0.1,
+                max_tokens=1000,
+                response_format={"type": "json_object"}
+            )
+            
+            parsed_content = response["choices"][0]["message"]["content"]
+            return json.loads(parsed_content)
+        except Exception as e:
+            logger.error(f"Failed to parse result for {mcp_server}: {e}")
+            return result # Fallback to raw result
+
     async def execute_task(self, state: AgentState, task: Dict) -> AgentState:
         """
         Execute a single task via MCP server.
@@ -77,8 +119,11 @@ class ActionAgent:
                 timeout=30.0
             )
             
+            # Parse/summarize result using specialized prompts
+            parsed_result = await self._parse_result(mcp_server, result)
+            
             # Update task status to completed
-            await self._update_status(state, task_id, "completed", result=result)
+            await self._update_status(state, task_id, "completed", result=parsed_result)
             state["completed_tasks"].append(task_id)
             
             return state
@@ -118,12 +163,12 @@ class ActionAgent:
         
         return state
 
-def create_action_node(mcp_registry: MCPRegistry, user_repo: UserRepository, audit_repo: AuditRepository):
+def create_action_node(mcp_registry: MCPRegistry, openrouter: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
     """Create Action Agent node for LangGraph."""
     # We need PlanRepository here
     from app.db.repositories.plan_repository import PlanRepository
     plan_repo = PlanRepository()
-    agent = ActionAgent(mcp_registry, user_repo, audit_repo, plan_repo)
+    agent = ActionAgent(mcp_registry, openrouter, user_repo, audit_repo, plan_repo)
     
     async def action_node(state: AgentState) -> AgentState:
         tasks = state.get("tasks", [])
