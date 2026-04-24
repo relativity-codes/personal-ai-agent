@@ -32,7 +32,8 @@ class AgentState(TypedDict):
 
     # User input
     user_id: str
-    clerk_sub: NotRequired[str]
+    google_id: NotRequired[str]
+    user_context: NotRequired[Dict[str, Any]]
     session_id: str
     user_input: str
     results: NotRequired[List[Any]]

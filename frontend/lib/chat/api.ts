@@ -15,6 +15,10 @@ export async function fetchSessionHistory(sessionId: string): Promise<ApiResult<
   return apiFetch<any[]>(`/api/v1/chat-history/session/${sessionId}`);
 }
 
+export async function fetchAllChatHistory(skip = 0, limit = 100): Promise<ApiResult<any[]>> {
+  return apiFetch<any[]>(`/api/v1/chat-history/?skip=${skip}&limit=${limit}`);
+}
+
 export async function deleteSession(sessionId: string): Promise<ApiResult<boolean>> {
   return apiFetch<boolean>(`/api/v1/sessions/${sessionId}`, {
     method: "DELETE",

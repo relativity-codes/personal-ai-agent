@@ -3,6 +3,10 @@ from langgraph.graph import StateGraph, END
 from typing import Dict, Any
 import json
 import re
+import logging
+from app.utils.logger import log_exception
+
+logger = logging.getLogger(__name__)
 
 from app.agents.state import AgentState
 from app.core.openrouter import OpenRouterClient
@@ -25,44 +29,61 @@ class IntentAgent:
         Classify user input into structured intent.
         """
         user_input = state["user_input"]
-        chat_history = state.get("chat_history", [])
+        chat_history = state.get("chat_history") or []
 
         # Prepare prompt with context
-        prompt = INTENT_CLASSIFIER_PROMPT.replace("{{current_date}}", "2026-04-21")
+        prompt = INTENT_CLASSIFIER_PROMPT.replace("{{current_date}}", "2026-04-24")
         
+        # Add user context to the prompt
+        user_context = state.get("user_context", {})
+        if user_context:
+            context_str = "\n".join([f"{k}: {v}" for k, v in user_context.items() if v])
+            prompt = f"{prompt}\n\nUser Context:\n{context_str}"
+
         # Format chat history for the prompt
         formatted_history = "\n".join([f'{msg["role"]}: {msg["message"]}' for msg in chat_history])
         prompt = f'{prompt}\n\nConversation History:\n{formatted_history}'
 
-        response = await self.openrouter.complete(
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.2,
-            max_tokens=500
-        )
-
-        content = response["choices"][0]["message"]["content"]
-
-        # Extract JSON
-        json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
-        if json_match:
-            content = json_match.group(1)
-
         try:
-            intent_data = json.loads(content)
-            state["validated_intent"] = intent_data
-            state["intent_confidence"] = intent_data.get("confidence", 0.5)
-            # Set the threshold for clarification
-            state["needs_clarification"] = intent_data.get("confidence", 1.0) < 0.8
-        except (json.JSONDecodeError, AttributeError):
-            # Handle cases where the model returns invalid JSON or no confidence
-            state["validated_intent"] = {}
-            state["intent_confidence"] = 0.0
-            state["needs_clarification"] = True
+            response = await self.openrouter.complete(
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": user_input}
+                ],
+                temperature=0.2,
+                max_tokens=500
+            )
 
-        return state
+            content = response["choices"][0]["message"]["content"]
+
+            # Extract JSON
+            json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(1)
+            else:
+                # Fallback: try to find anything that looks like a JSON object
+                obj_match = re.search(r'(\{.*\})', content, re.DOTALL)
+                if obj_match:
+                    content = obj_match.group(1)
+
+            try:
+                intent_data = json.loads(content)
+                state["validated_intent"] = intent_data
+                state["intent_confidence"] = intent_data.get("confidence", 0.5)
+                # Set the threshold for clarification
+                state["needs_clarification"] = intent_data.get("confidence", 1.0) < 0.8
+            except (json.JSONDecodeError, AttributeError) as e:
+                logger.warning(f"Failed to parse intent JSON. Error: {e}. Content: {content}")
+                # Handle cases where the model returns invalid JSON or no confidence
+                state["validated_intent"] = {}
+                state["intent_confidence"] = 0.0
+                state["needs_clarification"] = True
+
+            return state
+        except Exception as e:
+            log_exception(logger, e, context=f"Failed to classify intent for input: {user_input}")
+            state["error"] = str(e)
+            raise e
 
     async def validate_intent(self, state: AgentState) -> AgentState:
         """
@@ -76,30 +97,40 @@ class IntentAgent:
         # Prepare prompt for the validator
         prompt = INTENT_VALIDATOR_PROMPT
 
-        response = await self.openrouter.complete(
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.2,
-            max_tokens=150
-        )
-
-        content = response["choices"][0]["message"]["content"]
-
-        # The validator prompt is expected to return a JSON object with a "clarification_question" key.
-        json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
-        if json_match:
-            content = json_match.group(1)
-
         try:
-            validation_data = json.loads(content)
-            question = validation_data.get("clarification_question", "I'm sorry, I don't understand. Could you please rephrase?")
-            state["clarification_question"] = question
-        except (json.JSONDecodeError, AttributeError):
-            state["clarification_question"] = "I'm sorry, I'm having trouble understanding. Could you explain in a different way?"
+            response = await self.openrouter.complete(
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": user_input}
+                ],
+                temperature=0.2,
+                max_tokens=150
+            )
 
-        return state
+            content = response["choices"][0]["message"]["content"]
+
+            # The validator prompt is expected to return a JSON object with a "clarification_question" key.
+            json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(1)
+            else:
+                obj_match = re.search(r'(\{.*\})', content, re.DOTALL)
+                if obj_match:
+                    content = obj_match.group(1)
+
+            try:
+                validation_data = json.loads(content)
+                question = validation_data.get("clarification_question", "I'm sorry, I don't understand. Could you please rephrase?")
+                state["clarification_question"] = question
+            except (json.JSONDecodeError, AttributeError) as e:
+                logger.warning(f"Failed to parse validation JSON. Error: {e}. Content: {content}")
+                state["clarification_question"] = "I'm sorry, I'm having trouble understanding. Could you explain in a different way?"
+
+            return state
+        except Exception as e:
+            log_exception(logger, e, context=f"Failed to validate intent for input: {user_input}")
+            state["error"] = str(e)
+            raise e
 
 def create_intent_node(openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
     """Creates the intent agent node."""

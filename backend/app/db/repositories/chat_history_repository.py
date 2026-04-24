@@ -16,6 +16,9 @@ class ChatHistoryRepository:
         Get the last 4 chat history messages for a given session ID.
         """
         # Create a subquery to select the last 4 messages for the session
+        if (session_id is None):
+            return []
+        
         subquery = (
             select(ChatHistory)
             .where(ChatHistory.session_id == session_id)
@@ -41,6 +44,22 @@ class ChatHistoryRepository:
         await session.commit()
         await session.refresh(chat_history)
         return chat_history
+
+    @staticmethod
+    async def get_all_for_user(session: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100):
+        from app.db.models.session import Session
+        from sqlalchemy import cast, String
+        
+        query = (
+            select(ChatHistory)
+            .join(Session, cast(Session.id, String) == ChatHistory.session_id)
+            .where(Session.user_id == user_id)
+            .order_by(ChatHistory.timestamp.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await session.execute(query)
+        return result.scalars().all()
 
     @staticmethod
     async def get_all(session: AsyncSession, skip: int = 0, limit: int = 100):

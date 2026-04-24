@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ApiResult } from "./types";
+import { toast } from "sonner";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -27,15 +29,29 @@ export async function apiFetch<T>(
       try {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.detail || errorJson.message || errorMessage;
+        
+        // Handle specific case where detail is an object (like my recent backend fix)
+        if (typeof errorMessage === "object" && errorMessage !== null) {
+          errorMessage = (errorMessage as any).message || JSON.stringify(errorMessage);
+        }
       } catch {
         // Fallback to generic status error
       }
+
+      if (response.status === 401) {
+        toast.error("Session expired. Please log in again.", { id: "auth-error" });
+      } else {
+        toast.error(errorMessage);
+      }
+
       return { success: false, error: errorMessage };
     }
 
     const data = (await response.json()) as T;
     return { success: true, data };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    toast.error(errorMessage);
+    return { success: false, error: errorMessage };
   }
 }

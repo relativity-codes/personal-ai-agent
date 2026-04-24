@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,9 @@ from app.db.models.user import User
 from app.db.session import get_session
 from app.services.user_service import UserService
 from app.api.routers.v1.user_router import UserRead
+from app.utils.logger import log_exception
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -29,10 +33,16 @@ async def auth_google(
             login_request.id_token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
         )
     except ValueError as e:
-        # The token is invalid
+        log_exception(logger, e, context="Google login token verification failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Google ID token: {e}",
+        )
+    except Exception as e:
+        log_exception(logger, e, context="Google login failed unexpectedly")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during Google authentication",
         )
 
     # Get or create user based on the verified token information

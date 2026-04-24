@@ -4,7 +4,7 @@ import logging
 import jwt
 from typing import Annotated, TypedDict
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,29 +23,28 @@ class CurrentUser(TypedDict, total=False):
     """Authenticated principal for API routes and agent state."""
 
     user_id: str
-    clerk_sub: str
+    google_id: str
     email: str
     name: str | None
     avatar_url: str | None
 
 
 async def get_current_user(
+    request: Request,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)] = None,
     db: AsyncSession = Depends(get_session),
 ) -> CurrentUser:
-    if settings.DEV_AUTH_BYPASS:
-        return {
-            "user_id": settings.DEV_USER_INTERNAL_ID,
-            "clerk_sub": "dev_bypass",
-            "email": "dev@localhost",
-            "name": "Dev User",
-            "avatar_url": None,
-        }
 
-    raw = parse_bearer_token(authorization) or (creds.credentials if creds else None)
+    # 1. Try to get from Cookie first
+    raw = request.cookies.get("access_token")
+    
+    # 2. Fallback to Authorization Header
     if not raw:
-        raise HTTPException(status_code=401, detail="Missing bearer token")
+        raw = parse_bearer_token(authorization) or (creds.credentials if creds else None)
+    
+    if not raw:
+        raise HTTPException(status_code=401, detail="Missing authentication token")
 
     try:
         payload = jwt.decode(
@@ -64,7 +63,7 @@ async def get_current_user(
         
     return {
         "user_id": str(user.id),
-        "clerk_sub": getattr(user, "clerk_id", "none"),
+        "google_id": user.google_id or "none",
         "email": user.email,
         "name": user.name,
         "avatar_url": user.avatar_url,

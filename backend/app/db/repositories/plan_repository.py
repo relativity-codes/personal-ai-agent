@@ -30,15 +30,19 @@ def _plan_to_dict(row: ExecutionPlan) -> dict[str, Any]:
 class PlanRepository:
     @staticmethod
     async def get(plan_id: str) -> dict[str, Any] | None:
+        from sqlalchemy.orm import selectinload
         pid = uuid.UUID(plan_id)
         async with async_session_factory() as session:
-            row = await session.get(ExecutionPlan, pid)
+            stmt = select(ExecutionPlan).where(ExecutionPlan.id == pid).options(selectinload(ExecutionPlan.tasks))
+            result = await session.execute(stmt)
+            row = result.scalars().first()
             if row is None:
                 return None
             return _plan_to_dict(row)
 
     @staticmethod
     async def create(plan_data: dict[str, Any]) -> None:
+        from app.db.models.task import Task
         async with async_session_scope() as session:
             ep = ExecutionPlan(
                 id=uuid.UUID(plan_data["id"]),
@@ -46,12 +50,28 @@ class PlanRepository:
                 session_id=plan_data["session_id"],
                 intent_type=plan_data["intent_type"],
                 status=plan_data.get("status", "pending"),
-                tasks=plan_data["tasks"],
                 task_status=plan_data.get("task_status", {}),
                 task_results=plan_data.get("task_results", {}),
                 task_errors=plan_data.get("task_errors", {}),
                 execution_order=plan_data.get("execution_order", []),
             )
+            
+            # Convert tasks to Task instances
+            tasks = []
+            for t_data in plan_data.get("tasks", []):
+                tasks.append(Task(
+                    id=uuid.UUID(t_data["task_id"]),
+                    session_id=plan_data["session_id"],
+                    plan_id=ep.id,
+                    step=t_data["step"],
+                    description=t_data["description"],
+                    mcp_server=t_data["mcp_server"],
+                    tool=t_data["tool"],
+                    parameters=t_data["arguments"],
+                    depends_on=t_data.get("depends_on", []),
+                    status=t_data.get("status", "pending")
+                ))
+            ep.tasks = tasks
             session.add(ep)
 
     @staticmethod

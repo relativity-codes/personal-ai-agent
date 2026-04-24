@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatWebSocket, sendMessageRest } from "@/lib/chat/websocket";
+import { fetchSessionHistory } from "@/lib/chat/api";
 import type { ChatMessage } from "@/lib/chat/types";
 
 let _msgId = 0;
@@ -78,6 +80,31 @@ export function useChat(initialSessionId?: string) {
       wsRef.current = null;
     };
   }, []);
+
+  // Fetch history if sessionId is provided
+  useEffect(() => {
+    if (!sessionId) return;
+
+    let cancelled = false;
+    const loadHistory = async () => {
+      const result = await fetchSessionHistory(sessionId);
+      if (!cancelled && result.success && result.data) {
+        const historyMsgs: ChatMessage[] = result.data.map((m: any) => ({
+          id: m.id || nextId(),
+          role: m.role === "agent" ? "assistant" : "user",
+          content: m.message,
+          timestamp: new Date(m.created_at),
+        }));
+        setMessages(historyMsgs);
+      }
+    };
+
+    void loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
 
   const sendMessage = useCallback(
     async (text: string) => {
