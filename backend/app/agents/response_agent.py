@@ -8,6 +8,8 @@ from app.db.repositories.audit_repository import AuditRepository
 import logging
 from app.utils.logger import log_exception
 
+from app.utils.serialization import make_serializable, safe_json_dumps
+
 logger = logging.getLogger(__name__)
 
 class ResponseAgent:
@@ -29,7 +31,8 @@ class ResponseAgent:
             raw_results = state.get("results")
             if not raw_results:
                 raw_results = list(state.get("task_results", {}).values())
-            context = "\n".join(json.dumps(result) for result in raw_results)
+            
+            context = "\n".join(safe_json_dumps(result) for result in raw_results)
             
             # Add user context to the prompt
             user_info = ""
@@ -55,7 +58,10 @@ class ResponseAgent:
             )
 
             final_response = response["choices"][0]["message"]["content"]
-            print("_________\n\n\nIntent agent response", final_response);
+            if not final_response:
+                 final_response = "I processed your request but could not generate a summary. Please try again."
+            
+            logger.info(f"Response agent generated final response for session {state.get('session_id')}")
             state["final_response"] = final_response
 
             return state

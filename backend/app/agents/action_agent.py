@@ -11,6 +11,7 @@ from app.services.cache_service import redis_client
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
 from app.db.repositories.plan_repository import PlanRepository
+from app.utils.serialization import make_serializable, safe_json_dumps
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import (
     ACTION_GITHUB_PARSER_PROMPT,
@@ -40,6 +41,8 @@ class ActionAgent:
         # Update local state
         state["task_status"][task_id] = status
         if result is not None:
+            # Ensure result is serializable before storing in state/DB
+            result = make_serializable(result)
             state["task_results"][task_id] = result
         if error:
             state["task_errors"][task_id] = error
@@ -65,18 +68,8 @@ class ActionAgent:
                 await redis_client.set_json(f"plan:{plan_id}", plan, ttl=3600)
 
     def _safe_json_dumps(self, obj: Any) -> str:
-        """Safe JSON serialization that handles non-serializable objects."""
-        def default(o):
-            if hasattr(o, 'dict'):
-                return o.dict()
-            if hasattr(o, '__dict__'):
-                return o.__dict__
-            # Handle MCP content types specifically if they aren't caught by the above
-            if type(o).__name__ in ['TextContent', 'ImageContent', 'EmbeddedRes']:
-                return {k: v for k, v in o.__dict__.items() if not k.startswith('_')}
-            return str(o)
-            
-        return json.dumps(obj, default=default)
+        """Safe JSON serialization using utility."""
+        return safe_json_dumps(obj)
 
     async def _parse_result(self, mcp_server: str, result: Any) -> Any:
         """
@@ -101,7 +94,7 @@ class ActionAgent:
                     {"role": "user", "content": f"Parse and structure this raw tool result:\n{self._safe_json_dumps(result)}"},
                 ],
                 temperature=0.1,
-                max_tokens=1000,
+                max_tokens=2000, # Increased from 1000 to handle large Gmail results
                 response_format={"type": "json_object"}
             )
             

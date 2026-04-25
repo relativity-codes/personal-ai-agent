@@ -97,7 +97,12 @@ async def chat(
     logger.info(f"Invoking graph for session {session_id} with user input: {request.message}")
     try:
         final_state = await graph.ainvoke(initial_state)
-        response_message = final_state.get("final_response", "Sorry, I encountered an issue.")
+        
+        # Defensive check for final_response
+        response_message = final_state.get("final_response")
+        if response_message is None or response_message == "":
+            error_msg = final_state.get("error")
+            response_message = f"I encountered an issue: {error_msg}" if error_msg else "Sorry, I encountered an issue and could not generate a response."
 
         await chat_history_repo.add_message(db, str(session_id), "user", request.message)
         await chat_history_repo.add_message(db, str(session_id), "agent", response_message)
