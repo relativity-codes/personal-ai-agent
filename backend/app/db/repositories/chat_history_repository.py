@@ -23,7 +23,7 @@ class ChatHistoryRepository:
             select(ChatHistory)
             .where(ChatHistory.session_id == session_id)
             .order_by(desc(ChatHistory.timestamp))
-            .limit(4)
+            .limit(10)
             .alias("latest_messages")
         )
 
