@@ -9,6 +9,15 @@ def dict_merge(a: dict, b: dict) -> dict:
     merged.update(b)
     return merged
 
+def unique_add(a: list, b: list) -> list:
+    """Reducer that appends only new items to a list."""
+    # Ensure we don't duplicate items if they are already in the list
+    result = list(a)
+    for item in b:
+        if item not in result:
+            result.append(item)
+    return result
+
 class TaskStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
@@ -47,14 +56,14 @@ class AgentState(TypedDict):
     
     # Task Planner state
     plan_id: Optional[str]
-    tasks: Annotated[List[Task], operator.add]
+    tasks: List[Task] # Removed operator.add to prevent plan duplication
     task_status: Dict[str, TaskStatus]
     execution_order: List[str]
     
     # Execution state
     current_task_index: int
-    completed_tasks: Annotated[List[str], operator.add]
-    failed_tasks: Annotated[List[Dict], operator.add]
+    completed_tasks: Annotated[List[str], unique_add]
+    failed_tasks: Annotated[List[Dict], unique_add]
     task_results: Annotated[Dict[str, Any], dict_merge]
     
     # Final output

@@ -32,16 +32,16 @@ async def get_token(user_id: Optional[str] = None, refresh: bool = False) -> Opt
         return None
     creds = await get_mcp_credentials(user_id, MCPServiceId.GOOGLE)
     
-    if creds["access_token"] and not refresh:
-        return ["access_token"]    
+    if creds.get("access_token") and not refresh:
+        return creds["access_token"]    
 
     # 2. Load required credentials
-    refresh_token = creds["refresh_token"]
-    client_id = creds["client_id"]
-    client_secret = creds["client_secret"]
+    refresh_token = creds.get("refresh_token")
+    client_id = creds.get("client_id")
+    client_secret = creds.get("client_secret")
 
-    if not all([refresh_token, client_id, client_secret]):
-        logger.error("Missing Gmail OAuth credentials in environment variables")
+    if not refresh_token or not client_id or not client_secret:
+        logger.error("Missing Gmail OAuth credentials for user")
         return None
 
     # 3. Request new access token

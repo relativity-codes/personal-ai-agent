@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.db.repositories.plan_repository import PlanRepository
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
-from app.services.mcp_registry import mcp_registry
+from app.mcp_alt.registry import mcp_alt_registry
 
 def should_continue(state: AgentState) -> Literal["task_planner", "action", "response", END]:
     """
@@ -62,8 +62,8 @@ def create_managerial_graph() -> StateGraph:
 
     # --- Nodes ---
     intent_node = create_intent_node(openrouter, user_repo, audit_repo)
-    planner_node = create_task_planner_node(plan_repo, openrouter, user_repo, audit_repo)
-    action_node = create_action_node(mcp_registry, openrouter, user_repo, audit_repo)
+    planner_node = create_task_planner_node(mcp_alt_registry, plan_repo, openrouter, user_repo, audit_repo)
+    action_node = create_action_node(mcp_alt_registry, openrouter, user_repo, audit_repo)
     response_node = create_response_node(openrouter, user_repo, audit_repo)
 
     # --- Graph ---

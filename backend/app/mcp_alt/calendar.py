@@ -25,12 +25,12 @@ async def get_calendar_service(user_id: Optional[str] = None):
     creds_data = await get_mcp_credentials(user_id, MCPServiceId.GOOGLE)
     if not creds_data:
         return None
-    token = creds_data.get("access_token") or token
-    refresh_token = creds_data.get("refresh_token") or refresh_token
-    client_id = creds_data.get("client_id") or client_id
-    client_secret = creds_data.get("client_secret") or client_secret
+    token = creds_data.get("access_token")
+    refresh_token = creds_data.get("refresh_token")
+    client_id = creds_data.get("client_id")
+    client_secret = creds_data.get("client_secret")
 
-    if not (token or refresh_token):
+    if not token and not refresh_token:
         return None
 
     creds_obj = Credentials(
@@ -82,11 +82,31 @@ async def detect_overlaps(events: List[Dict[str, Any]], user_id: Optional[str] =
     return {"ok": True, "overlaps": overlaps, "event_count": len(events)}
 
 @server.tool()
-async def calendar_fetch_events(start_date: str, end_date: str, max_results: int = 20, user_id: Optional[str] = None) -> Dict[str, Any]:
+async def calendar_fetch_events(
+    start_date: Optional[str] = None, 
+    end_date: Optional[str] = None, 
+    date: Optional[str] = None,
+    max_results: int = 20, 
+    user_id: Optional[str] = None
+) -> Dict[str, Any]:
     """Get events from the primary calendar."""
     service = await get_calendar_service(user_id)
     if not service:
         return {"ok": False, "error": "not_configured", "message": "Google Calendar not configured."}
+    
+    # Handle the case where the planner provides 'date' instead of start/end dates
+    if date:
+        if not start_date:
+            start_date = f"{date}T00:00:00Z"
+        if not end_date:
+            end_date = f"{date}T23:59:59Z"
+            
+    if not start_date or not end_date:
+        return {
+            "ok": False, 
+            "error": "missing_parameters", 
+            "message": "Either 'start_date' and 'end_date' must be provided, or 'date' must be provided."
+        }
     
     events_result = service.events().list(
         calendarId="primary",

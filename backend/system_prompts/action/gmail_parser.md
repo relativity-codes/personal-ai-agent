@@ -10,8 +10,9 @@ You MUST return STRICT JSON only.
 
 ## Supported Input Shapes
 
-* `threads[].messages[]`
-* `messages[]`
+* `threads[]` (wrapped in {"ok": true, "threads": [...]})
+* `thread` (wrapped in {"ok": true, "thread": {...}})
+* `message` (wrapped in {"ok": true, "message": {...}})
 
 You MUST normalize both into a unified `threads[]` output.
 

@@ -49,8 +49,8 @@ If normalization is not possible → require clarification.
 
 | Intent          | MCP Servers         |
 | --------------- | ------------------- |
-| schedule_lookup | ["google_calendar"] |
-| create_event    | ["google_calendar"] |
+| schedule_lookup | ["calendar"] |
+| create_event    | ["calendar"] |
 | pr_management   | ["github"]          |
 | create_issue    | ["github"]          |
 | search_pages    | ["notion"]          |

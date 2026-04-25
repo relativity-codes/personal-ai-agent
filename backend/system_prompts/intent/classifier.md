@@ -29,11 +29,11 @@ You MUST choose one. Never invent new intents.
 
 | Intent Type        | MCP Servers                             |
 | ------------------ | --------------------------------------- |
-| schedule_lookup    | ["google_calendar"]                     |
-| create_event       | ["google_calendar"]                     |
+| schedule_lookup    | ["calendar"]                            |
+| create_event       | ["calendar"]                            |
 | pr_management      | ["github"]                              |
 | create_issue       | ["github"]                              |
-| agenda_preparation | ["google_calendar", "github", "notion"] |
+| agenda_preparation | ["calendar", "github", "notion"]        |
 | search_pages       | ["notion"]                              |
 | update_page        | ["notion"]                              |
 | email_summary      | ["gmail"]                               |
@@ -151,7 +151,7 @@ If confidence < 0.7:
     "query": null,
     "title": "design review"
   },
-  "required_mcp_servers": ["google_calendar"],
+  "required_mcp_servers": ["calendar"],
   "clarification_needed": null
 }
 ```

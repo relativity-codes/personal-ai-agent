@@ -13,6 +13,7 @@ from app.core.openrouter import OpenRouterClient
 from app.db.session import close_db, init_db
 from app.services.cache_service import redis_client
 from app.mcp_alt.registry import mcp_alt_registry as mcp_registry_service
+# from app.services.mcp_registry import mcp_registry
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
         base_url=settings.OPENROUTER_BASE_URL,
     )
     await mcp_registry_service.initialize()
+    # await mcp_registry.initialize()
     logger.info("startup complete")
     yield
     await close_db()

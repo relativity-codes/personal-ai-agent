@@ -10,11 +10,11 @@ You MUST return STRICT JSON only.
 
 ## Supported Inputs
 
-* List of PRs
-* Single PR details
-* Commits list
-* PR diff summary
-* Issue creation response
+* List of PRs (wrapped in {"ok": true, "data": [...]})
+* Single PR details (wrapped in {"ok": true, "data": {...}})
+* Commits list (wrapped in {"ok": true, "data": [...]})
+* PR diff summary (wrapped in {"ok": true, "diff": "..."})
+* Issue creation response (wrapped in {"ok": true, "data": {...}})
 
 ---
 

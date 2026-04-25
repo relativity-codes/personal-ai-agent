@@ -22,9 +22,9 @@ async def get_headers(token: Optional[str] = None, user_id: Optional[str] = None
         logger.exception("Error refreshing Github token: No user ID provided")
         return None
     creds = await get_mcp_credentials(user_id, MCPServiceId.GITHUB)
-    if not creds and not "token" in creds:
-        logger.exception("Error refreshing Github token: No user ID provided")
-        return None
+    if not creds or "token" not in creds:
+        logger.warning(f"No GitHub credentials found for user {user_id}")
+        return {}
     t = creds["token"]
             
     headers = {

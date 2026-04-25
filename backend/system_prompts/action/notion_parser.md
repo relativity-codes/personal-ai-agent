@@ -10,9 +10,9 @@ You MUST return STRICT JSON only.
 
 ## Supported Input Types
 
-* Single page object
-* List of pages (`results[]`)
-* List of blocks (`results[]`)
+* Single page object (may be wrapped in {"ok": true, "data": {...}})
+* List of pages (may be wrapped in {"ok": true, "results": [...]})
+* List of blocks (may be wrapped in {"ok": true, "results": [...]})
 
 You MUST normalize all into a consistent structure.
 

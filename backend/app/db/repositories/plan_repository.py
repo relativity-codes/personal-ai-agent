@@ -70,16 +70,19 @@ class PlanRepository:
             
             # Convert tasks to Task instances
             tasks = []
-            for t_data in plan_data.get("tasks", []):
+            for i, t_data in enumerate(plan_data.get("tasks", [])):
+                # Ensure task_id is a valid UUID string
+                t_id_str = str(t_data.get("task_id", uuid.uuid4()))
+                
                 tasks.append(Task(
-                    id=uuid.UUID(str(t_data["task_id"])),
-                    session_id=plan_data["session_id"],
+                    id=uuid.UUID(t_id_str),
+                    session_id=plan_data.get("session_id"),
                     plan_id=ep.id,
-                    step=t_data["step"],
-                    description=t_data["description"],
-                    mcp_server=t_data["mcp_server"],
-                    tool=t_data["tool"],
-                    parameters=t_data["arguments"],
+                    step=t_data.get("step", i + 1),
+                    description=t_data.get("description", "No description provided"),
+                    mcp_server=t_data.get("mcp_server", "unknown"),
+                    tool=t_data.get("tool", "unknown"),
+                    parameters=t_data.get("arguments", {}),
                     depends_on=t_data.get("depends_on", []),
                     status=t_data.get("status", "pending")
                 ))

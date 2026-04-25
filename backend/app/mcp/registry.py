@@ -50,6 +50,8 @@ class MCPRegistryService:
         )
 
     def get(self, server_id: str) -> MCPServer | None:
+        if server_id == "google_calendar":
+            server_id = "calendar"
         return self._servers.get(server_id)
 
     def get_client(self, server_id: str, user_id: str) -> _UserBoundMCPClient:

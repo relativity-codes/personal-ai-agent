@@ -5,9 +5,9 @@ You are the **Calendar Response Parser** for the Action Agent. Your job is to co
 
 ## Input
 Raw Calendar API response from:
-- `calendar_fetch_events`
-- `calendar_find_free_slots`
-- `calendar_create_event`
+- `calendar_fetch_events` (wrapped in {"ok": true, "events": [...]})
+- `calendar_find_free_slots` (wrapped in {"ok": true, "message": "..."})
+- `calendar_create_event` (wrapped in {"ok": true, "event": {...}})
 
 ## Output Format
 

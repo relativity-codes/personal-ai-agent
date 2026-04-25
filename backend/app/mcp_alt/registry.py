@@ -18,8 +18,11 @@ class MCPAltRegistry:
             "calendar": calendar_server,
             "gmail": gmail_server,
         }
+        self._tools_cache: Dict[str, Dict[str, Any]] = {}
 
     def get_server(self, server_id: str) -> Optional[Server]:
+        if server_id == "google_calendar":
+            server_id = "calendar"
         return self._servers.get(server_id)
 
     async def list_servers(self, db: Optional[Any] = None, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -62,8 +65,6 @@ class MCPAltRegistry:
     async def list_all_tools(self) -> List[Dict[str, Any]]:
         out = []
         for server_id, server in self._servers.items():
-            # In the mcp-python-sdk, Server.list_tools() is a sync or async method depending on version
-            # Usually it returns a list of Tool objects
             try:
                 tools = await server.list_tools()
                 out.append({
@@ -72,7 +73,7 @@ class MCPAltRegistry:
                         {
                             "name": t.name,
                             "description": t.description,
-                            "input_schema": t.input_schema
+                            "input_schema": getattr(t, "inputSchema", getattr(t, "input_schema", {}))
                         } for t in tools
                     ]
                 })
@@ -80,8 +81,26 @@ class MCPAltRegistry:
                 logger.error(f"Failed to list tools for {server_id}: {e}")
         return out
 
+    def get_tool_schema(self, server_id: str, tool_name: str) -> Optional[Dict[str, Any]]:
+        if server_id == "google_calendar":
+            server_id = "calendar"
+        return self._tools_cache.get(f"{server_id}:{tool_name}")
+
     async def initialize(self) -> None:
-        logger.info("MCPAltRegistry initialized with %d servers", len(self._servers))
+        logger.info("MCPAltRegistry initializing...")
+        for server_id, server in self._servers.items():
+            try:
+                tools = await server.list_tools()
+                for t in tools:
+                    schema = getattr(t, "inputSchema", getattr(t, "input_schema", {}))
+                    self._tools_cache[f"{server_id}:{t.name}"] = {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": schema
+                    }
+            except Exception as e:
+                logger.error(f"Failed to cache tools for {server_id}: {e}")
+        logger.info("MCPAltRegistry initialized with %d tools", len(self._tools_cache))
 
     async def summary(self) -> Dict[str, Any]:
         servers_info = []
@@ -91,7 +110,7 @@ class MCPAltRegistry:
                 "id": s_id,
                 "tools_count": len(tools)
             })
-            
+        print("\n\n\n\n\n\n\n\n_________\nservers", servers_info, "\n\n\n\n_______________")
         return {
             "servers_count": len(self._servers),
             "servers": servers_info

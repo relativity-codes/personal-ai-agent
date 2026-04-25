@@ -12,7 +12,8 @@ from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
 from app.services.cache_service import redis_client
 from app.core.openrouter import OpenRouterClient
-from app.core.prompts import MANAGER_TASK_DECOMPOSER_PROMPT
+from app.core.prompts import get_prompt
+from app.mcp_alt.registry import MCPAltRegistry
 from app.utils.logger import log_exception
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,8 @@ class TaskPlannerAgent:
     Uses an LLM for dynamic task decomposition and rule-based logic for dependency tracking.
     """
 
-    def __init__(self, plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
+    def __init__(self, mcp_registry: MCPAltRegistry, plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
+        self.mcp_registry = mcp_registry
         self.plan_repo = plan_repo
         self.openrouter = openrouter_client
         self.user_repo = user_repo
@@ -265,8 +267,14 @@ class TaskPlannerAgent:
         """
         Decompose intent into tasks using the LLM.
         """
-        prompt = MANAGER_TASK_DECOMPOSER_PROMPT.replace("{{current_date}}", datetime.now().isoformat())
+        prompt = get_prompt("managerial", "task_decomposer").replace("{{current_date}}", datetime.now().isoformat())
         
+        # Add tool catalog to the prompt
+        tools = await self.mcp_registry.list_all_tools()
+        if tools:
+            catalog_str = json.dumps(tools, indent=2)
+            prompt = f"{prompt}\n\nTOOL CATALOG (STRICT SCHEMAS):\n{catalog_str}"
+
         # Add user context to the prompt
         user_context = state.get("user_context", {})
         if user_context:
@@ -301,6 +309,12 @@ class TaskPlannerAgent:
 
         try:
             tasks_data = json.loads(tasks_json)
+            
+            # Handle wrapped format: {"tasks": [...], "execution_order": [...]}
+            if isinstance(tasks_data, dict) and "tasks" in tasks_data:
+                logger.info("Detected wrapped JSON format from LLM")
+                tasks_data = tasks_data["tasks"]
+                
             if not isinstance(tasks_data, list):
                 # If it's a single dict, wrap it in a list
                 if isinstance(tasks_data, dict):
@@ -309,7 +323,7 @@ class TaskPlannerAgent:
                     raise ValueError(f"Expected list of tasks from LLM, got {type(tasks_data).__name__}")
             
             # Assign a UUID to each task, but preserve the original ID for dependency resolution
-            for task in tasks_data:
+            for i, task in enumerate(tasks_data):
                 orig_id = task.get("task_id")
                 task["original_task_id"] = str(orig_id) if orig_id is not None else None
                 
@@ -319,12 +333,25 @@ class TaskPlannerAgent:
                 if "arguments" not in task:
                     task["arguments"] = {}
                 
-                # Store the original ID (likely a step number) if it's not already there
-                if "step" not in task and orig_id is not None:
+                # Ensure step is an integer and present
+                if "step" not in task:
+                    if orig_id is not None:
+                        try:
+                            # Try to extract number from "task_1" or "1"
+                            nums = re.findall(r'\d+', str(orig_id))
+                            if nums:
+                                task["step"] = int(nums[0])
+                            else:
+                                task["step"] = i + 1
+                        except (ValueError, TypeError):
+                            task["step"] = i + 1
+                    else:
+                        task["step"] = i + 1
+                else:
                     try:
-                        task["step"] = int(orig_id)
+                        task["step"] = int(task["step"])
                     except (ValueError, TypeError):
-                        pass
+                        task["step"] = i + 1
                 
                 task["task_id"] = str(uuid.uuid4())
                 
@@ -333,9 +360,9 @@ class TaskPlannerAgent:
             logger.error(f"Failed to decode JSON from LLM response. Error: {e}\nAttempted to parse:\n{tasks_json}")
             raise ValueError(f"Failed to decode JSON from LLM response: {e}")
 
-def create_task_planner_node(plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
+def create_task_planner_node(mcp_registry: MCPAltRegistry, plan_repo: PlanRepository, openrouter_client: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
     """Create Task Planner node for LangGraph."""
-    agent = TaskPlannerAgent(plan_repo, openrouter_client, user_repo, audit_repo)
+    agent = TaskPlannerAgent(mcp_registry, plan_repo, openrouter_client, user_repo, audit_repo)
 
     async def task_planner_node(state: AgentState) -> AgentState:
         if not state.get("plan_id"):

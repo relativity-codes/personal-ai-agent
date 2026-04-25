@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 
 from app.utils.logger import log_exception
 from app.agents.state import AgentState, TaskStatus
-from app.mcp.base import MCPRegistry
+from app.mcp_alt.registry import MCPAltRegistry
 from app.services.cache_service import redis_client
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
@@ -26,7 +26,7 @@ class ActionAgent:
     Action Agent: Executes MCP server calls and updates task status.
     """
     
-    def __init__(self, mcp_registry: MCPRegistry, openrouter: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository, plan_repo: PlanRepository):
+    def __init__(self, mcp_registry: MCPAltRegistry, openrouter: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository, plan_repo: PlanRepository):
         self.mcp_registry = mcp_registry
         self.openrouter = openrouter
         self.user_repo = user_repo
@@ -64,13 +64,27 @@ class ActionAgent:
                     plan["task_errors"][task_id] = error
                 await redis_client.set_json(f"plan:{plan_id}", plan, ttl=3600)
 
+    def _safe_json_dumps(self, obj: Any) -> str:
+        """Safe JSON serialization that handles non-serializable objects."""
+        def default(o):
+            if hasattr(o, 'dict'):
+                return o.dict()
+            if hasattr(o, '__dict__'):
+                return o.__dict__
+            # Handle MCP content types specifically if they aren't caught by the above
+            if type(o).__name__ in ['TextContent', 'ImageContent', 'EmbeddedRes']:
+                return {k: v for k, v in o.__dict__.items() if not k.startswith('_')}
+            return str(o)
+            
+        return json.dumps(obj, default=default)
+
     async def _parse_result(self, mcp_server: str, result: Any) -> Any:
         """
         Uses a specialized parser prompt to clean up and structure tool output.
         """
         parser_prompts = {
             "github": ACTION_GITHUB_PARSER_PROMPT,
-            "google_calendar": ACTION_CALENDAR_PARSER_PROMPT,
+            "calendar": ACTION_CALENDAR_PARSER_PROMPT,
             "notion": ACTION_NOTION_PARSER_PROMPT,
             "gmail": ACTION_GMAIL_PARSER_PROMPT,
         }
@@ -84,7 +98,7 @@ class ActionAgent:
             response = await self.openrouter.complete(
                 messages=[
                     {"role": "system", "content": prompt},
-                    {"role": "user", "content": f"Parse and structure this raw tool result:\n{json.dumps(result)}"},
+                    {"role": "user", "content": f"Parse and structure this raw tool result:\n{self._safe_json_dumps(result)}"},
                 ],
                 temperature=0.1,
                 max_tokens=1000,
@@ -92,11 +106,98 @@ class ActionAgent:
             )
             
             parsed_content = response["choices"][0]["message"]["content"]
-            print("_________\n\n\nAction agent response", parsed_content)
+            logger.info(f"Action agent parsed result for {mcp_server}: {parsed_content}")
             return json.loads(parsed_content)
         except Exception as e:
             logger.error(f"Failed to parse result for {mcp_server}: {e}")
             return result # Fallback to raw result
+
+    def _resolve_path(self, data: Any, path: str) -> Any:
+        """Resolve a dot-notated path in a nested structure (dict/list)."""
+        import re
+        parts = path.split('.')
+        curr = data
+        for part in parts:
+            if curr is None:
+                break
+                
+            # Handle array indexing like 'items[0]'
+            match = re.match(r'(\w+)\[(\d+)\]', part)
+            if match:
+                name, idx = match.groups()
+                if isinstance(curr, dict):
+                    curr = curr.get(name)
+                if isinstance(curr, list) and int(idx) < len(curr):
+                    curr = curr[int(idx)]
+                else:
+                    curr = None
+            elif isinstance(curr, dict):
+                curr = curr.get(part)
+            elif isinstance(curr, list):
+                try:
+                    curr = curr[int(part)]
+                except (ValueError, IndexError):
+                    curr = None
+            else:
+                curr = None
+        return curr
+
+    def _substitute_placeholders(self, value: Any, state: AgentState, plan_tasks: List[Dict] = None) -> Any:
+        """Recursively substitute {{...}} placeholders in parameters."""
+        import re
+        
+        if isinstance(value, dict):
+            return {k: self._substitute_placeholders(v, state, plan_tasks) for k, v in value.items()}
+        if isinstance(value, list):
+            return [self._substitute_placeholders(v, state, plan_tasks) for v in value]
+        if not isinstance(value, str):
+            return value
+
+        # 1. Handle {{user_context.KEY}}
+        def replace_context(match):
+            path = match.group(1).strip()
+            result = self._resolve_path(state.get("user_context", {}), path)
+            if result is None:
+                logger.warning(f"Context value missing for placeholder: {match.group(0)}. Context: {state.get('user_context')}")
+                return "" # Return empty string instead of the placeholder
+            return str(result)
+        
+        logger.debug(f"Substituting in value: {value}")
+        value = re.sub(r'\{\{\s*user_context\.([\w\.]+)\s*\}\}', replace_context, value)
+
+        # 2. Handle {{task_X_output.PATH}}
+        def replace_output(match):
+            task_ref = match.group(1)
+            path = match.group(2)
+            
+            # Find the actual task_id for this reference
+            target_task_id = None
+            if plan_tasks:
+                for t in plan_tasks:
+                    if t.get("original_task_id") == task_ref or t.get("task_id") == task_ref:
+                        target_task_id = t["task_id"]
+                        break
+            
+            if not target_task_id:
+                # Fallback to direct lookup in results by ID
+                target_task_id = task_ref
+
+            result_data = state.get("task_results", {}).get(target_task_id)
+            if result_data is not None:
+                extracted = self._resolve_path(result_data, path) if path else result_data
+                if extracted is not None:
+                    # If the placeholder is the ENTIRE string and extracted is a complex type, return it directly
+                    if match.group(0) == value and not isinstance(extracted, (str, int, float, bool)):
+                        return extracted
+                    return str(extracted)
+            
+            return match.group(0)
+
+        # Updated regex to handle task_X_output or task_UUID_output
+        # Pattern: {{task_([^_]+)_output(?:\.(.+))?}}
+        value = re.sub(r'\{\{task_([^_]+)_output(?:\.([\w\.\[\]]+))?\}\}', replace_output, value)
+        
+        return value
 
     async def execute_task(self, state: AgentState, task: Dict) -> AgentState:
         """
@@ -105,18 +206,50 @@ class ActionAgent:
         task_id = task["task_id"]
         mcp_server = task["mcp_server"]
         tool = task["tool"]
-        parameters = task.get("arguments", task.get("parameters", {}))
         
-        start_time = time.time()
+        # Get full plan tasks for dependency resolution
+        plan_id = state.get("plan_id")
+        plan_tasks = []
+        if plan_id:
+            plan = await redis_client.get_json(f"plan:{plan_id}")
+            if not plan:
+                plan = await self.plan_repo.get(plan_id)
+            if plan:
+                plan_tasks = plan.get("tasks", [])
+
+        # Substitute placeholders in parameters
+        raw_parameters = task.get("arguments", task.get("parameters", {}))
+        parameters = self._substitute_placeholders(raw_parameters, state, plan_tasks)
+        
+        logger.info(f"Executing task {task_id} ({mcp_server}/{tool}) with params: {parameters}")
+        
+        # Validation Gate (Tool Contract Enforcement)
+        schema_info = self.mcp_registry.get_tool_schema(mcp_server, tool)
+        if schema_info:
+            from jsonschema import validate, ValidationError
+            try:
+                # The schema is in schema_info["parameters"]
+                validate(instance=parameters, schema=schema_info["parameters"])
+                logger.info(f"Task {task_id} passed validation")
+            except ValidationError as e:
+                error = f"Tool argument mismatch for {mcp_server}/{tool}: {e.message}"
+                logger.error(error)
+                await self._update_status(state, task_id, "failed", error=error)
+                state["failed_tasks"].append({"task_id": task_id, "error": error})
+                return state
         
         try:
-            # Get MCP client for user
-            principal = state.get("google_id") or state.get("user_id")
-            mcp_client = self.mcp_registry.get_client(mcp_server, str(principal))
+            # Get principal (user_id for credential lookup)
+            principal = state.get("user_id")
             
-            # Execute with timeout
+            # Execute via mcp_alt_registry
             result = await asyncio.wait_for(
-                mcp_client.execute(tool, parameters),
+                self.mcp_registry.invoke_tool(
+                    server_id=mcp_server,
+                    tool_name=tool,
+                    arguments=parameters,
+                    user_id=str(principal) if principal else None
+                ),
                 timeout=30.0
             )
             
@@ -125,10 +258,11 @@ class ActionAgent:
             
             # Update task status to completed
             await self._update_status(state, task_id, "completed", result=parsed_result)
-            state["completed_tasks"].append(task_id)
+            if task_id not in state["completed_tasks"]:
+                state["completed_tasks"].append(task_id)
             
             return state
-            
+        
         except asyncio.TimeoutError:
             error = f"Timeout after 30 seconds"
             logger.warning(f"Task {task_id} ({mcp_server}/{tool}) timed out")
@@ -164,7 +298,7 @@ class ActionAgent:
         
         return state
 
-def create_action_node(mcp_registry: MCPRegistry, openrouter: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
+def create_action_node(mcp_registry: MCPAltRegistry, openrouter: OpenRouterClient, user_repo: UserRepository, audit_repo: AuditRepository):
     """Create Action Agent node for LangGraph."""
     # We need PlanRepository here
     from app.db.repositories.plan_repository import PlanRepository
