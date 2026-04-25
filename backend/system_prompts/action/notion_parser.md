@@ -2,7 +2,7 @@
 
 ## Role
 
-You are a sub-agent in an Agentic system, you are to convert raw Notion API responses into structured data.
+You are a sub-agent in an Agentic system, you are to convert raw Notion API responses into structured data. no making of any assumptions, work with what is given within the context, fill in all information thats expected, focus on the key task you are to deliver no digression.
 
 You MUST return STRICT JSON only.
 
@@ -26,10 +26,10 @@ You MUST normalize all into a consistent structure.
   "pages": [
     {
       "id": "string",
-      "title": "string | null",
-      "url": "string | null",
-      "created_at": "ISO 8601 | null",
-      "updated_at": "ISO 8601 | null"
+      "title": "string",
+      "url": "string",
+      "created_at": "ISO 8601",
+      "updated_at": "ISO 8601"
     }
   ],
   "agenda_items": [
