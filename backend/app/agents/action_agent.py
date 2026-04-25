@@ -92,6 +92,7 @@ class ActionAgent:
             )
             
             parsed_content = response["choices"][0]["message"]["content"]
+            print("_________\n\n\nAction agent response", parsed_content)
             return json.loads(parsed_content)
         except Exception as e:
             logger.error(f"Failed to parse result for {mcp_server}: {e}")

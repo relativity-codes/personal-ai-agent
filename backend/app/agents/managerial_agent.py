@@ -19,7 +19,8 @@ def should_continue(state: AgentState) -> Literal["task_planner", "action", "res
     Deterministic router for the agent workflow.
     Priority order matters.
     """
-
+    print("_________\n\n\nAgent State from should continue", state)
+    
     # --- 0. Hard stop (safety) ---
     if state["iteration"] >= state["max_iterations"]:
         return "response"
@@ -78,12 +79,14 @@ def create_managerial_graph() -> StateGraph:
     # --- Routers (IMPORTANT: separate logic) ---
 
     def route_from_intent(state: AgentState):
+        print("_________\n\n\nAgent State from route from intent", state)
         intent = state.get("validated_intent") or {}
-        if intent.get("requires_planning"):
+        if intent:
             return "planner"
         return "response"
 
     def route_from_planner(state: AgentState):
+        print("_________\n\n\nAgent State from route from planner", state)
         tasks = state.get("tasks", [])
         if not tasks:
             return "response"
@@ -94,6 +97,7 @@ def create_managerial_graph() -> StateGraph:
         return "action"
 
     def route_from_action(state: AgentState):
+        print("_________\n\n\nAgent State from route from action", state)
         if state.get("error"):
             return "response"
         

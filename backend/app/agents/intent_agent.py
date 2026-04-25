@@ -64,7 +64,7 @@ class IntentAgent:
             )
 
             content = response["choices"][0]["message"]["content"]
-
+            print("_________\n\n\nclassify Intent agent response",content)
             # Extract JSON safely
             json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", content, re.DOTALL)
             if json_match:
@@ -116,7 +116,7 @@ class IntentAgent:
             )
 
             content = response["choices"][0]["message"]["content"]
-
+            print("_________\n\n\nvalidate Intent agent response",content)
             json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", content, re.DOTALL)
             if json_match:
                 content = json_match.group(1)
