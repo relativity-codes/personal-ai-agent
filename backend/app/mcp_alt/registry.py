@@ -22,18 +22,40 @@ class MCPAltRegistry:
     def get_server(self, server_id: str) -> Optional[Server]:
         return self._servers.get(server_id)
 
-    async def list_servers(self) -> List[Dict[str, Any]]:
+    async def list_servers(self, db: Optional[Any] = None, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        from app.db.repositories.mcp_credential_repository import MCPCredentialRepository
+        from app.api.deps import parse_uuid
+        
+        user_credentials = {}
+        if db and user_id:
+            try:
+                uid = parse_uuid(user_id, "user_id")
+                creds = await MCPCredentialRepository.get_by_user(db, uid)
+                # Map server_id to True, and also handle the google -> calendar/gmail mapping
+                user_credentials = {}
+                for c in creds:
+                    user_credentials[c.server_id] = True
+                    if c.server_id == "google":
+                        user_credentials["calendar"] = True
+                        user_credentials["gmail"] = True
+            except Exception as e:
+                logger.error(f"Failed to fetch user credentials for registry: {e}")
+
         out = []
         for server_id, server in self._servers.items():
             tools_count = 0
             if hasattr(server, 'list_tools'):
-                tools = await server.list_tools()
-                tools_count = len(tools)
+                try:
+                    tools = await server.list_tools()
+                    tools_count = len(tools)
+                except Exception:
+                    pass
             
             out.append({
                 "id": server_id,
                 "name": server_id.capitalize(),
-                "tools_count": tools_count
+                "tools_count": tools_count,
+                "configured": user_credentials.get(server_id, False)
             })
         return out
 
