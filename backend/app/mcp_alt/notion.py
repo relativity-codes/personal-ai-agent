@@ -3,7 +3,7 @@ import re
 import uuid
 import logging
 from typing import Optional, Any, List, Dict
-from mcp.server import Server
+from mcp.server.fastmcp import FastMCP
 from notion_client import Client
 from app.mcp_alt.utils import get_mcp_credentials
 from app.api.schemas import MCPServiceId
@@ -12,7 +12,7 @@ from app.api.schemas import MCPServiceId
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-notion")
 
-server = Server("notion")
+server = FastMCP("notion")
 
 # Global client for env-based fallback
 NOTION_TOKEN = os.environ.get("NOTION_API_KEY") or os.environ.get("NOTION_TOKEN")

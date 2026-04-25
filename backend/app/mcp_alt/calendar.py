@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Optional, Any, Dict, List
 from datetime import datetime
-from mcp.server import Server
+from mcp.server.fastmcp import FastMCP
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -14,7 +14,7 @@ from app.api.schemas import MCPServiceId
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-calendar")
 
-server = Server("calendar")
+server = FastMCP("calendar")
 
 async def get_calendar_service(user_id: Optional[str] = None):
 

@@ -24,9 +24,13 @@ export async function fetchMcpOauthStatus(): Promise<ApiResult<McpOauthStatus>> 
   return apiFetch<McpOauthStatus>("/api/v1/mcp/oauth/status");
 }
 
-export async function fetchAuthorizeUrl(provider: string, redirectUri: string): Promise<ApiResult<{ url: string }>> {
+export async function fetchAuthorizeUrl(provider: string, redirectUri: string, state?: string): Promise<ApiResult<{ url: string }>> {
   const encodedUri = encodeURIComponent(redirectUri);
-  return apiFetch<{ url: string }>(`/api/v1/mcp/oauth/${provider}/authorize-url?redirect_uri=${encodedUri}`);
+  let path = `/api/v1/mcp/oauth/${provider}/authorize-url?redirect_uri=${encodedUri}`;
+  if (state) {
+    path += `&state=${encodeURIComponent(state)}`;
+  }
+  return apiFetch<{ url: string }>(path);
 }
 
 export async function exchangeOAuthCode(provider: string, code: string, redirectUri: string): Promise<ApiResult<any>> {

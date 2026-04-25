@@ -1,6 +1,6 @@
 import logging
 from typing import Any, Dict, List, Optional
-from mcp.server import Server
+from mcp.server.fastmcp import FastMCP as Server
 
 # Import our servers
 from app.mcp_alt.github import server as github_server
@@ -22,15 +22,20 @@ class MCPAltRegistry:
     def get_server(self, server_id: str) -> Optional[Server]:
         return self._servers.get(server_id)
 
-    def list_servers(self) -> List[Dict[str, Any]]:
-        return [
-            {
+    async def list_servers(self) -> List[Dict[str, Any]]:
+        out = []
+        for server_id, server in self._servers.items():
+            tools_count = 0
+            if hasattr(server, 'list_tools'):
+                tools = await server.list_tools()
+                tools_count = len(tools)
+            
+            out.append({
                 "id": server_id,
                 "name": server_id.capitalize(),
-                "tools_count": len(server.list_tools()) if hasattr(server, 'list_tools') else 0
-            }
-            for server_id, server in self._servers.items()
-        ]
+                "tools_count": tools_count
+            })
+        return out
 
     async def list_all_tools(self) -> List[Dict[str, Any]]:
         out = []
@@ -38,7 +43,7 @@ class MCPAltRegistry:
             # In the mcp-python-sdk, Server.list_tools() is a sync or async method depending on version
             # Usually it returns a list of Tool objects
             try:
-                tools = server.list_tools()
+                tools = await server.list_tools()
                 out.append({
                     "server_id": server_id,
                     "tools": [
@@ -56,16 +61,18 @@ class MCPAltRegistry:
     async def initialize(self) -> None:
         logger.info("MCPAltRegistry initialized with %d servers", len(self._servers))
 
-    def summary(self) -> Dict[str, Any]:
+    async def summary(self) -> Dict[str, Any]:
+        servers_info = []
+        for s_id, server in self._servers.items():
+            tools = await server.list_tools()
+            servers_info.append({
+                "id": s_id,
+                "tools_count": len(tools)
+            })
+            
         return {
             "servers_count": len(self._servers),
-            "servers": [
-                {
-                    "id": s_id,
-                    "tools_count": len(server.list_tools())
-                }
-                for s_id, server in self._servers.items()
-            ]
+            "servers": servers_info
         }
 
     async def invoke_tool(self, server_id: str, tool_name: str, arguments: Dict[str, Any], user_id: Optional[str] = None) -> Any:

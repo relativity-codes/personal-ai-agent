@@ -2,7 +2,9 @@ from __future__ import annotations
 import logging
 from typing import Annotated, Any
 from fastapi import APIRouter, Body, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
+from app.db.database import get_db
 from app.mcp.schema import InvokeRequest, InvokeResponse
 # from app.mcp.registry import mcp_registry
 from app.mcp_alt.registry import mcp_alt_registry
@@ -91,9 +93,13 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
 
 
 @router.get("/servers")
-async def list_mcp_servers(user: dict = Depends(get_current_user)) -> dict[str, Any]:
+async def list_mcp_servers(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user)
+) -> dict[str, Any]:
     logger.debug("mcp.list_servers user_id=%s", user.get("user_id"))
-    return {"servers": mcp_alt_registry.list_servers()}
+    user_id = user.get("user_id")
+    return {"servers": await mcp_alt_registry.list_servers(db, user_id)}
 
 
 @router.get("/tools")

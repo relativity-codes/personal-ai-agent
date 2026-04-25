@@ -52,6 +52,7 @@ def mcp_oauth_status(user: dict = Depends(get_current_user)) -> dict[str, Any]:
 def google_oauth_authorize_url(
     user: dict = Depends(get_current_user),
     redirect_uri: str = Query(..., description="Must match a redirect URI allowed for this Google OAuth client."),
+    state: str = Query(None, description="Optional state parameter to pass through to the callback."),
 ) -> dict[str, str]:
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=503, detail="GOOGLE_CLIENT_ID is not configured.")
@@ -64,6 +65,8 @@ def google_oauth_authorize_url(
         "prompt": "consent",
         "include_granted_scopes": "true",
     }
+    if state:
+        params["state"] = state
     return {"url": f"{GOOGLE_AUTH_ENDPOINT}?{urlencode(params)}"}
 
 
@@ -118,6 +121,7 @@ async def google_oauth_exchange(
 def github_oauth_authorize_url(
     user: dict = Depends(get_current_user),
     redirect_uri: str = Query(..., description="Must match GitHub redirect URI."),
+    state: str = Query(None, description="Optional state parameter."),
 ) -> dict[str, str]:
     if not settings.GITHUB_CLIENT_ID:
         raise HTTPException(status_code=503, detail="GITHUB_CLIENT_ID is not configured.")
@@ -126,6 +130,8 @@ def github_oauth_authorize_url(
         "redirect_uri": redirect_uri,
         "scope": "repo user",
     }
+    if state:
+        params["state"] = state
     return {"url": f"{GITHUB_AUTH_ENDPOINT}?{urlencode(params)}"}
 
 
@@ -169,6 +175,7 @@ async def github_oauth_exchange(
 def notion_oauth_authorize_url(
     user: dict = Depends(get_current_user),
     redirect_uri: str = Query(..., description="Must match Notion redirect URI."),
+    state: str = Query(None, description="Optional state parameter."),
 ) -> dict[str, str]:
     if not settings.NOTION_CLIENT_ID:
         raise HTTPException(status_code=503, detail="NOTION_CLIENT_ID is not configured.")
@@ -178,6 +185,8 @@ def notion_oauth_authorize_url(
         "response_type": "code",
         "owner": "user",
     }
+    if state:
+        params["state"] = state
     return {"url": f"{NOTION_AUTH_ENDPOINT}?{urlencode(params)}"}
 
 

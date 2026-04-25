@@ -78,7 +78,7 @@ async def health_check():
         "services": {
             "database": await db_health(),
             "redis": await rc.health(),
-            "mcp": mcp_registry_service.summary(),
+            "mcp": await mcp_registry_service.summary(),
         },
     }
 

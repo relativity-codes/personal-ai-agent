@@ -10,7 +10,11 @@ type Props = {
   busy?: boolean;
 };
 
-export function OAuthButton({ integrationId, disabled, busy: busyProp }: Props) {
+export function OAuthButton({
+  integrationId,
+  disabled,
+  busy: busyProp,
+}: Props) {
   const [busyState, setBusyState] = useState(false);
   const busy = busyProp || busyState;
 
@@ -27,10 +31,10 @@ export function OAuthButton({ integrationId, disabled, busy: busyProp }: Props) 
 
     if (provider) {
       setBusyState(true);
-      // We pass the provider as a query param so the callback page knows who to exchange with
-      const redirectUri = `${window.location.origin}/integrations/callback?provider=${provider}`;
-      const res = await fetchAuthorizeUrl(provider, redirectUri);
-      
+      // We pass the provider as a state param so the callback page knows who to exchange with
+      const redirectUri = `${window.location.origin}/integrations/callback`;
+      const res = await fetchAuthorizeUrl(provider, redirectUri, provider);
+
       if (res.success) {
         window.location.assign(res.data.url);
       } else {
@@ -45,7 +49,7 @@ export function OAuthButton({ integrationId, disabled, busy: busyProp }: Props) 
   return (
     <button
       type="button"
-      className="inline-flex w-full min-h-[44px] min-w-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:outline-zinc-200 sm:w-auto sm:min-w-[140px]"
+      className="inline-flex min-h-[44px] w-full min-w-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[140px] dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:outline-zinc-200"
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       onClick={handleClick}

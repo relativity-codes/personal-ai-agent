@@ -12,7 +12,7 @@ function CallbackContent() {
 
   useEffect(() => {
     const code = searchParams.get("code");
-    const provider = searchParams.get("provider");
+    const provider = searchParams.get("provider") || searchParams.get("state");
 
     if (!code) {
       setError("No authorization code found in URL.");
@@ -26,9 +26,9 @@ function CallbackContent() {
 
     const exchange = async () => {
       // Must match exactly what was sent to fetchAuthorizeUrl
-      const redirectUri = `${window.location.origin}/integrations/callback?provider=${provider}`;
+      const redirectUri = `${window.location.origin}/integrations/callback`;
       const res = await exchangeOAuthCode(provider, code, redirectUri);
-      
+
       if (res.success) {
         setStatus(`Authorization with ${provider} successful! Redirecting...`);
         setTimeout(() => router.push("/integrations"), 1500);

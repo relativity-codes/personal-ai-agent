@@ -6,7 +6,7 @@ import base64
 import logging
 from typing import Optional, Any, Dict, List
 import httpx
-from mcp.server import Server
+from mcp.server.fastmcp import FastMCP
 import os
 import time
 import logging
@@ -16,7 +16,7 @@ from typing import Optional
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-gmail")
 
-server = Server("gmail")
+server = FastMCP("gmail")
 
 GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
