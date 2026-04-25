@@ -156,13 +156,15 @@ class ActionAgent:
         # 1. Handle {{user_context.KEY}}
         def replace_context(match):
             path = match.group(1).strip()
-            result = self._resolve_path(state.get("user_context", {}), path)
+            user_context = state.get("user_context") or {}
+            result = self._resolve_path(user_context, path)
+            print(f"DEBUG: Resolving context path '{path}' -> {result}")
             if result is None:
-                logger.warning(f"Context value missing for placeholder: {match.group(0)}. Context: {state.get('user_context')}")
+                logger.warning(f"Context value missing for placeholder: {match.group(0)}. Context: {user_context}")
                 return "" # Return empty string instead of the placeholder
             return str(result)
         
-        logger.debug(f"Substituting in value: {value}")
+        print(f"DEBUG: Substituting in value: {value}")
         value = re.sub(r'\{\{\s*user_context\.([\w\.]+)\s*\}\}', replace_context, value)
 
         # 2. Handle {{task_X_output.PATH}}
@@ -258,8 +260,13 @@ class ActionAgent:
             
             # Update task status to completed
             await self._update_status(state, task_id, "completed", result=parsed_result)
+            if "completed_tasks" not in state:
+                state["completed_tasks"] = []
             if task_id not in state["completed_tasks"]:
                 state["completed_tasks"].append(task_id)
+            
+            # Ensure uniqueness one more time (defensive)
+            state["completed_tasks"] = list(dict.fromkeys(state["completed_tasks"]))
             
             return state
         
@@ -308,9 +315,14 @@ def create_action_node(mcp_registry: MCPAltRegistry, openrouter: OpenRouterClien
     async def action_node(state: AgentState) -> AgentState:
         tasks = state.get("tasks", [])
         if tasks:
+            num_tasks = len(tasks)
             # Clear tasks from state so they aren't re-run by mistake
             state["tasks"] = []
             state = await agent.execute_batch(state, tasks)
+            
+            # Increment index for the next batch
+            state["current_task_index"] = state.get("current_task_index", 0) + num_tasks
+            
         return state
     
     return action_node

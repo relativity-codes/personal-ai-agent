@@ -29,7 +29,7 @@ def normalize_notion_resource_id(raw: str) -> str:
     """Return a hyphenated UUID string accepted by the Notion API."""
     s = (raw or "").strip()
     if not s:
-        raise ValueError("Notion ID is empty.")
+        return "NOT_CONFIGURED"
     
     # Remove quotes if present
     while len(s) >= 2 and s[0] == s[-1] == '"':
@@ -46,7 +46,7 @@ def normalize_notion_resource_id(raw: str) -> str:
     if m:
         return str(uuid.UUID(m.group(1).lower()))
         
-    raise ValueError(f"Could not parse a valid 32-character Notion ID from: {raw}")
+    return "INVALID_ID"
 
 @server.tool()
 async def query_database(database_id: str, page_size: int = 10, user_id: Optional[str] = None) -> Dict[str, Any]:
@@ -56,6 +56,8 @@ async def query_database(database_id: str, page_size: int = 10, user_id: Optiona
         return {"ok": False, "error": "not_configured", "message": "Notion API key not set."}
     
     db_id = normalize_notion_resource_id(database_id)
+    if db_id in ["NOT_CONFIGURED", "INVALID_ID"]:
+        return {"ok": False, "error": "not_configured", "message": f"Notion Database ID is missing or invalid: {database_id}"}
     return notion.databases.query(database_id=db_id, page_size=min(page_size, 100))
 
 @server.tool()
@@ -72,6 +74,8 @@ async def create_page(
         return {"ok": False, "error": "not_configured", "message": "Notion API key not set."}
     
     normalized_parent_id = normalize_notion_resource_id(parent_id)
+    if normalized_parent_id in ["NOT_CONFIGURED", "INVALID_ID"]:
+        return {"ok": False, "error": "not_configured", "message": f"Notion Parent ID is missing or invalid: {parent_id}"}
     parent = {parent_type: normalized_parent_id}
     
     properties = {

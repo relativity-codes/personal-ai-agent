@@ -101,9 +101,17 @@ def create_managerial_graph() -> StateGraph:
         if state.get("error"):
             return "response"
         
-        tasks = state.get("tasks", [])
-        if state.get("current_task_index", 0) < len(tasks):
-            state["current_task_index"] += 1
+        # All tasks from previous planner step are cleared in action_node
+        # If there are more tasks in the overall plan that are pending, go back to planner
+        plan_tasks = state.get("tasks", []) # This is already cleared in action_node though
+        
+        # We check the actual plan status from the state/DB
+        all_tasks_complete = all(
+            status in ["completed", "failed"]
+            for status in state.get("task_status", {}).values()
+        )
+        
+        if not all_tasks_complete:
             return "planner"
         return "response"
 
