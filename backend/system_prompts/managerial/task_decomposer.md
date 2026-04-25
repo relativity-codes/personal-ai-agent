@@ -91,48 +91,86 @@ Return ONLY:
 
 ---
 
-## Example
+## Advanced Planning Rules
 
-### Input Intent
-```json
-{
-  "intent_type": "agenda_preparation",
-  "entities": {
-    "date": "2023-10-27",
-    "title": "standup"
-  }
-}
-```
+### 1. Implicit State Handover
+When passing data from one task to another, explicitly define the desired format in the `parameters`.
+*   **Bad**: `"content": "{{task_1_output.summary}}"`
+*   **Good**: `"content": "## Email Summary\n{{task_1_output.summary}}\n\nGenerated via Agent on {{current_date}}"`
 
-### Output
+### 2. Search-Before-Act
+If a task requires an ID (like a Notion page or GitHub issue) that isn't provided, always add a "lookup" step first.
+1.  `search_pages` (Notion) or `github_repo_lookup` (GitHub)
+2.  Use `{{task_1_output.id}}` in the subsequent step.
+
+---
+
+## Example 1: Gmail to Notion Summarization
+**Input**: "Summarize my unread emails from today and save them to a new Notion page called 'Daily Briefing'"
+**Output**:
 ```json
 {
   "tasks": [
     {
       "task_id": "task_1",
       "step": 1,
-      "description": "Fetch calendar events",
-      "mcp_server": "calendar",
-      "tool": "calendar_fetch_events",
+      "description": "Fetch and summarize unread emails",
+      "mcp_server": "gmail",
+      "tool": "email_summary",
       "parameters": {
-        "date": "2023-10-27"
+        "days_back": 1
       },
-      "depends_on": [],
-      "status": "pending"
+      "depends_on": []
     },
     {
       "task_id": "task_2",
       "step": 2,
-      "description": "Create standup agenda in Notion",
+      "description": "Create Daily Briefing page in Notion",
       "mcp_server": "notion",
       "tool": "create_page",
       "parameters": {
         "parent_id": "{{user_context.default_notion_db}}",
-        "title": "Standup Agenda 2023-10-27",
-        "content": "Events: {{task_1_output.events}}"
+        "title": "Daily Briefing - {{current_date}}",
+        "content": "# Email Summary\n{{task_1_output.summary}}\n\n*Detailed Threads:*\n{{task_1_output.threads}}"
       },
-      "depends_on": ["task_1"],
-      "status": "pending"
+      "depends_on": ["task_1"]
+    }
+  ],
+  "execution_order": ["task_1", "task_2"]
+}
+```
+
+## Example 2: Update Calendar based on Issue
+**Input**: "Schedule a meeting for tomorrow 10am to discuss the login bug in org/frontend"
+**Output**:
+```json
+{
+  "tasks": [
+    {
+      "task_id": "task_1",
+      "step": 1,
+      "description": "Get issue details for the login bug",
+      "mcp_server": "github",
+      "tool": "github_repo_lookup",
+      "parameters": {
+        "owner": "org",
+        "repo": "frontend",
+        "path": "issues"
+      },
+      "depends_on": []
+    },
+    {
+      "task_id": "task_2",
+      "step": 2,
+      "description": "Create calendar event",
+      "mcp_server": "calendar",
+      "tool": "create_event",
+      "parameters": {
+        "title": "Meeting: Discuss Login Bug (GitHub #{{task_1_output.issue_number}})",
+        "start_time": "2026-04-26T10:00:00Z",
+        "end_time": "2026-04-26T11:00:00Z"
+      },
+      "depends_on": ["task_1"]
     }
   ],
   "execution_order": ["task_1", "task_2"]
@@ -144,5 +182,6 @@ Return ONLY:
 ## Behavior Rules
 * Be deterministic and minimal
 * Use `user_context` whenever available to fill in missing parameters
+* **Dates**: Always use `YYYY-MM-DD` format for date parameters. Use the provided `{{current_date}}` as your reference.
 * Never exceed 3 tasks
 * Never include explanations outside JSON

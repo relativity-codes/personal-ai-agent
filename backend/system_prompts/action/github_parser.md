@@ -30,6 +30,7 @@ You MUST return STRICT JSON only.
       "author": "string",
       "status": "open | closed | merged",
       "review_status": "approved | changes_requested | pending | unknown",
+      "category": "Bug | Feature | Refactor | Documentation | unknown",
       "additions": number,
       "deletions": number,
       "changed_files": number,
@@ -49,6 +50,7 @@ You MUST return STRICT JSON only.
   "created_issue": {
     "number": number,
     "title": "string",
+    "category": "Bug | Feature | Refactor | unknown",
     "url": "string"
   } | null,
   "total_count": number,
@@ -151,6 +153,16 @@ number + html_url
 
 ---
 
+### 10. Intelligent Classification
+Classify PRs and Issues into categories based on title/snippet:
+*   **Bug**: title contains "fix", "bug", "issue", "crash", "error", "hotfix"
+*   **Feature**: title contains "feat", "add", "new", "implement", "support"
+*   **Refactor**: title contains "refactor", "cleanup", "chore", "reorganize"
+*   **Documentation**: title contains "docs", "readme", "comment"
+*   Default: "unknown"
+
+---
+
 ### 9. Title Handling
 
 * Trim to max 80 chars
@@ -159,13 +171,9 @@ number + html_url
 ---
 
 ## Summary Rules
-
-* PR list:
-  → "{n} pull requests found"
-* Commits:
-  → "{n} commits retrieved"
-* Issue:
-  → "Created issue #{number}: {title}"
+*   **Detailed Summary**: Instead of just counts, include a highlight if possible.
+    *   Example: "Found 3 PRs, including a high-impact **Bug** fix #123."
+    *   Example: "Successfully created **Feature** issue #456."
 
 ---
 

@@ -36,7 +36,8 @@ Raw Calendar API response from:
   ],
   "busy_percentage": 35.5,
   "total_events": 5,
-  "created_event_id": "string or null"
+  "created_event_id": "string or null",
+  "conflict_detected": true/false
 }
 ```
 
@@ -54,6 +55,28 @@ Raw Calendar API response from:
 ### Attendees
 - Extract email addresses from attendees array
 - Exclude the current user's email
+
+### Intelligent Classification
+Categorize events based on title or attendees:
+*   **Deep Work**: title contains "focus", "deep work", "blocker", or just a single attendee (self)
+*   **External**: attendees contain non-company emails (gmail.com, outlook.com, etc.)
+*   **Team Sync**: title contains "sync", "standup", "weekly", or many internal attendees
+*   Default: "Meeting"
+
+### Conflict Detection
+Set a `conflict_detected` flag (boolean) if any events overlap in time.
+
+## Error Handling
+If the input contains `"ok": false`, translate the error:
+*   `"upstream_error"` (401) → "I couldn't connect to Google Calendar. Please reconnect your account."
+*   `"not_found"` → "I couldn't find that calendar or event."
+*   Default → "I encountered an issue with Google Calendar: {message}"
+
+## Summary Rules
+*   **Smart Summary**:
+    *   "Found {n} events. **Conflict detected** between {event1} and {event2}."
+    *   "Successfully scheduled **Team Sync**: {title}."
+    *   "You have a **Deep Work** block starting at {time}."
 
 ## Examples
 

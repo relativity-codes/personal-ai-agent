@@ -25,10 +25,12 @@ async def get_calendar_service(user_id: Optional[str] = None):
     creds_data = await get_mcp_credentials(user_id, MCPServiceId.GOOGLE)
     if not creds_data:
         return None
+    from app.config import settings
+    
     token = creds_data.get("access_token")
     refresh_token = creds_data.get("refresh_token")
-    client_id = creds_data.get("client_id")
-    client_secret = creds_data.get("client_secret")
+    client_id = creds_data.get("client_id") or settings.GOOGLE_CLIENT_ID
+    client_secret = creds_data.get("client_secret") or settings.GOOGLE_CLIENT_SECRET
 
     if not token and not refresh_token:
         return None
@@ -96,10 +98,17 @@ async def calendar_fetch_events(
     
     # Handle the case where the planner provides 'date' instead of start/end dates
     if date:
+        from datetime import datetime, timedelta
+        target_date = date
+        if date.lower() == "today":
+            target_date = datetime.utcnow().strftime("%Y-%m-%d")
+        elif date.lower() == "tomorrow":
+            target_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%d")
+            
         if not start_date:
-            start_date = f"{date}T00:00:00Z"
+            start_date = f"{target_date}T00:00:00Z"
         if not end_date:
-            end_date = f"{date}T23:59:59Z"
+            end_date = f"{target_date}T23:59:59Z"
             
     if not start_date or not end_date:
         return {

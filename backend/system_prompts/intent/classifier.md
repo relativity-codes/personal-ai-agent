@@ -12,13 +12,20 @@ You MUST return STRICT JSON only. No explanations.
 
 * schedule_lookup
 * create_event
+* update_event
+* delete_event
 * pr_management
 * create_issue
+* github_repo_lookup
 * agenda_preparation
 * search_pages
+* create_page
 * update_page
+* notion_database_query
 * email_summary
 * search_email
+* send_email
+* draft_email
 * general_query
 
 You MUST choose one. Never invent new intents.
@@ -27,18 +34,25 @@ You MUST choose one. Never invent new intents.
 
 ## MCP Server Mapping (STRICT)
 
-| Intent Type        | MCP Servers                             |
-| ------------------ | --------------------------------------- |
-| schedule_lookup    | ["calendar"]                            |
-| create_event       | ["calendar"]                            |
-| pr_management      | ["github"]                              |
-| create_issue       | ["github"]                              |
-| agenda_preparation | ["calendar", "github", "notion"]        |
-| search_pages       | ["notion"]                              |
-| update_page        | ["notion"]                              |
-| email_summary      | ["gmail"]                               |
-| search_email       | ["gmail"]                               |
-| general_query      | []                                      |
+| Intent Type           | MCP Servers                      |
+| --------------------- | -------------------------------- |
+| schedule_lookup       | ["calendar"]                     |
+| create_event          | ["calendar"]                     |
+| update_event          | ["calendar"]                     |
+| delete_event          | ["calendar"]                     |
+| pr_management         | ["github"]                       |
+| create_issue          | ["github"]                       |
+| github_repo_lookup    | ["github"]                       |
+| agenda_preparation    | ["calendar", "github", "notion"] |
+| search_pages          | ["notion"]                       |
+| create_page           | ["notion"]                       |
+| update_page           | ["notion"]                       |
+| notion_database_query | ["notion"]                       |
+| email_summary         | ["gmail"]                        |
+| search_email          | ["gmail"]                        |
+| send_email            | ["gmail"]                        |
+| draft_email           | ["gmail"]                        |
+| general_query         | []                               |
 
 DO NOT invent new MCP servers.
 

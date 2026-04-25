@@ -36,9 +36,10 @@ async def get_token(user_id: Optional[str] = None, refresh: bool = False) -> Opt
         return creds["access_token"]    
 
     # 2. Load required credentials
+    from app.config import settings
     refresh_token = creds.get("refresh_token")
-    client_id = creds.get("client_id")
-    client_secret = creds.get("client_secret")
+    client_id = creds.get("client_id") or settings.GOOGLE_CLIENT_ID
+    client_secret = creds.get("client_secret") or settings.GOOGLE_CLIENT_SECRET
 
     if not refresh_token or not client_id or not client_secret:
         logger.error("Missing Gmail OAuth credentials for user")

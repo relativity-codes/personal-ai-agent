@@ -22,7 +22,6 @@ You MUST normalize both into a unified `threads[]` output.
 
 ```json
 {
-  "summary": "string",
   "threads": [
     {
       "id": "string",
@@ -36,8 +35,6 @@ You MUST normalize both into a unified `threads[]` output.
       "importance": "high | normal | low"
     }
   ],
-  "unread_count": number,
-  "needs_response_count": number
 }
 ```
 
@@ -155,6 +152,14 @@ If input is:
 
 ---
 
+## Error Handling
+If the input contains `"ok": false`, translate the error:
+*   `"upstream_error"` (401/403) → "Authentication failed. Please reconnect your Gmail account."
+*   `"rate_limit"` → "Gmail is temporarily rate-limited. Retrying in a moment."
+*   Default → "I encountered an issue accessing your emails: {message}"
+
+---
+
 ## Hard Constraints
 
 * NEVER omit fields
@@ -169,7 +174,6 @@ If input is:
 
 ```json
 {
-  "summary": "2 unread emails, 1 may need a response",
   "threads": [
     {
       "id": "thread_1",
@@ -183,7 +187,5 @@ If input is:
       "importance": "normal"
     }
   ],
-  "unread_count": 2,
-  "needs_response_count": 1
 }
 ```

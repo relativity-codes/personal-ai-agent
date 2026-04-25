@@ -28,6 +28,7 @@ You MUST normalize all into a consistent structure.
       "id": "string",
       "title": "string",
       "url": "string",
+      "category": "Project | Task | Meeting | Wiki | unknown",
       "created_at": "ISO 8601",
       "updated_at": "ISO 8601"
     }
@@ -39,6 +40,7 @@ You MUST normalize all into a consistent structure.
       "block_id": "string"
     }
   ],
+  "pending_tasks_count": number,
   "content_summary": "string | null"
 }
 ```
@@ -116,13 +118,28 @@ If page content available:
 
 ---
 
-### 7. Summary Generation
+### 7. Intelligent Classification
+Classify pages into categories based on title or parent:
+*   **Meeting**: title contains "meeting", "sync", "standup", "agenda"
+*   **Task**: title contains "todo", "task", "action item"
+*   **Project**: title contains "roadmap", "plan", "project"
+*   Default: "Wiki"
 
-* Create:
-  → "Created page: {title}"
-  → "Updated page: {title}"
-  → "Found {n} pages"
-  → "Found {n} agenda items"
+---
+
+## Error Handling
+If the input contains `"ok": false`, translate the error:
+*   `"upstream_error"` (401) → "I couldn't connect to Notion. Please check your integration token."
+*   `"not_found"` → "I couldn't find that page or database in Notion."
+*   Default → "I encountered an issue with Notion: {message}"
+
+---
+
+## Summary Rules
+*   **Smart Summary**:
+    *   "Created **Meeting** page: {title}"
+    *   "Found {n} pages, including {m} **Task** items."
+    *   "Found {pending_tasks_count} pending agenda items."
 
 ---
 

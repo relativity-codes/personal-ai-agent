@@ -185,6 +185,19 @@ async def notion_get_database_schema(database_id: str, user_id: Optional[str] = 
     return notion.databases.retrieve(database_id=db_id)
 
 @server.tool()
+async def notion_search(query: str, filter_type: Optional[str] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
+    """Search for pages or databases by title."""
+    notion = await get_client(user_id)
+    if not notion:
+        return {"ok": False, "error": "not_configured", "message": "Notion API key not set."}
+    
+    params = {"query": query}
+    if filter_type:
+        params["filter"] = {"value": filter_type, "property": "object"}
+    
+    return notion.search(**params).get("results", [])
+
+@server.tool()
 async def notion_add_comment(page_id: str, comment: str, user_id: Optional[str] = None) -> Dict[str, Any]:
     """Add a comment to a page."""
     notion = await get_client(user_id)

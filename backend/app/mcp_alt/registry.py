@@ -5,7 +5,7 @@ from mcp.server.fastmcp import FastMCP as Server
 # Import our servers
 from app.mcp_alt.github import server as github_server
 from app.mcp_alt.notion import server as notion_server
-from app.mcp_alt.calendar import server as calendar_server
+from app.mcp_alt.mcp_calendar import server as calendar_server
 from app.mcp_alt.gmail import server as gmail_server
 
 logger = logging.getLogger(__name__)
