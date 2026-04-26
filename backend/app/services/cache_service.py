@@ -16,6 +16,8 @@ class RedisCache:
         self._client: Optional[redis.Redis] = None
 
     async def connect(self) -> None:
+        if self._client is not None:
+            await self.disconnect()
         try:
             self._client = redis.from_url(settings.REDIS_URL, decode_responses=True)
             if self._client is not None:

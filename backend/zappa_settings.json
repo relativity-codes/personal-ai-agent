@@ -1,0 +1,28 @@
+{
+  "production": {
+    "app_function": "app.main.app",
+    "app_type": "asgi",
+    "project_name": "personal-ai-agent",
+    "s3_bucket": "REPLACE_WITH_A_GLOBALLY_UNIQUE_S3_BUCKET_NAME",
+    "aws_region": "us-east-1",
+    "runtime": "python3.11",
+    "memory_size": 1536,
+    "timeout_seconds": 60,
+    "slim_handler": true,
+    "binary_support": true,
+    "exclude": [
+      "tests",
+      "scratch",
+      ".venv",
+      ".pytest_cache",
+      "__pycache__",
+      "*.pyc",
+      "*.md",
+      ".env",
+      ".env.*"
+    ],
+    "environment_variables": {
+      "APP_ENV": "production"
+    }
+  }
+}

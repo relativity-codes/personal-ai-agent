@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.middleware import AuthMiddleware
 from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, task_router, session_router, auth, mcp_credential_router
 from app.api.websocket import chat as ws_chat
@@ -18,9 +20,11 @@ from app.mcp_alt.registry import mcp_alt_registry as mcp_registry_service
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
 
+_startup_lock = asyncio.Lock()
+_startup_complete = False
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+
+async def _application_startup(app: FastAPI) -> None:
     await init_db()
     await redis_client.connect()
     app.state.openrouter = OpenRouterClient(
@@ -28,12 +32,40 @@ async def lifespan(app: FastAPI):
         base_url=settings.OPENROUTER_BASE_URL,
     )
     await mcp_registry_service.initialize()
-    # await mcp_registry.initialize()
     logger.info("startup complete")
-    yield
+
+
+async def _application_shutdown() -> None:
     await close_db()
     await redis_client.disconnect()
     logger.info("shutdown complete")
+
+
+async def ensure_application_started(app: FastAPI) -> None:
+    """Idempotent startup for ASGI servers that run lifespan (uvicorn) and those that do not (Zappa ASGI)."""
+    global _startup_complete
+    if _startup_complete:
+        return
+    async with _startup_lock:
+        if _startup_complete:
+            return
+        await _application_startup(app)
+        _startup_complete = True
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _startup_complete
+    await ensure_application_started(app)
+    yield
+    await _application_shutdown()
+    _startup_complete = False
+
+
+class _EnsureStartupMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        await ensure_application_started(request.app)
+        return await call_next(request)
 
 
 app = FastAPI(
@@ -52,6 +84,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts_list)
+app.add_middleware(_EnsureStartupMiddleware)
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])

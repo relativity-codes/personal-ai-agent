@@ -97,6 +97,50 @@ The API will be available at `http://localhost:8000`.
 -   **Swagger UI (API Docs):** `http://localhost:8000/docs`
 -   **ReDoc:** `http://localhost:8000/redoc`
 
+## Deploy with Zappa (AWS Lambda)
+
+The backend can be deployed with [Zappa](https://github.com/zappa/Zappa) as an ASGI app on API Gateway and Lambda.
+
+### Prerequisites
+
+- AWS CLI configured (`aws configure`) with permissions to create Lambda, API Gateway, IAM roles, and S3 objects.
+- An **S3 bucket** in the same account and region as the deployment, used only for Zappa to upload deployment packages. Replace `REPLACE_WITH_A_GLOBALLY_UNIQUE_S3_BUCKET_NAME` in `zappa_settings.json` with that bucket name (create it first if needed).
+
+### Install Zappa
+
+```bash
+uv sync --group deploy
+```
+
+### Configure Lambda environment
+
+Zappa does not read your local `.env`. Set production secrets and URLs in `zappa_settings.json` under `environment_variables`, or attach them later in the AWS Lambda console. At minimum you need the same variables as local development: PostgreSQL, Redis, auth keys, optional API keys, and:
+
+- `ALLOWED_HOSTS` — include your API Gateway host (for example `*.execute-api.us-east-1.amazonaws.com` and any custom domain).
+- `CORS_ORIGINS` — your deployed frontend origin(s).
+
+Apply database schema with Alembic against your production database before sending traffic (for example run `uv run alembic upgrade head` from CI or your machine, pointed at production).
+
+### Commands (from `backend/`)
+
+```bash
+# First deployment
+uv run zappa deploy production
+
+# Subsequent code updates
+uv run zappa update production
+
+# Logs
+uv run zappa tail production
+```
+
+### Limitations
+
+- Zappa’s ASGI bridge does **not** run FastAPI lifespan; this app uses idempotent startup middleware so database and Redis still initialize on Lambda.
+- **WebSockets** (`/ws/...`) are not supported through Zappa’s default ASGI path; use a separate service (for example ECS) if you need chat WebSockets in production.
+- Deployment package size and cold starts: this project has many dependencies; watch the Lambda deployment package size limit and consider `exclude` / slim packaging if needed.
+- Packaging runs on your local machine and pulls manylinux wheels for Lambda’s Linux runtime; slow networks or timeouts can fail `zappa package` / `deploy`. Retry, or run deploy from a Linux CI host (or Zappa’s Docker-based workflow) if packaging is unreliable.
+
 ## Running Tests
 
 To run the test suite, use `pytest`:
