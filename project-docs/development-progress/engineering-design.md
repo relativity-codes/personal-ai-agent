@@ -331,8 +331,8 @@ class Settings(BaseSettings):
     CLERK_WEBHOOK_SECRET: str
     
     # MCP Server Credentials
-    GITHUB_CLIENT_ID: Optional[str] = None
-    GITHUB_CLIENT_SECRET: Optional[str] = None
+    MY_GITHUB_CLIENT_ID: Optional[str] = None
+    MY_GITHUB_CLIENT_SECRET: Optional[str] = None
     
     NOTION_CLIENT_ID: Optional[str] = None
     NOTION_CLIENT_SECRET: Optional[str] = None
@@ -376,7 +376,7 @@ class User(Base):
     avatar_url = Column(String(500))
     
     # Preferences
-    default_github_repo = Column(String(255))
+    default_MY_GITHUB_repo = Column(String(255))
     default_notion_db = Column(String(255))
     timezone = Column(String(50), default="UTC")
     working_hours_start = Column(String(5), default="09:00")
@@ -1778,7 +1778,7 @@ def upgrade() -> None:
         sa.Column('email', sa.String(255), nullable=False),
         sa.Column('name', sa.String(255)),
         sa.Column('avatar_url', sa.String(500)),
-        sa.Column('default_github_repo', sa.String(255)),
+        sa.Column('default_MY_GITHUB_repo', sa.String(255)),
         sa.Column('default_notion_db', sa.String(255)),
         sa.Column('timezone', sa.String(50), server_default='UTC'),
         sa.Column('working_hours_start', sa.String(5), server_default='09:00'),
@@ -1983,8 +1983,8 @@ CLERK_PUBLISHABLE_KEY=pk_xxxxxxxxxxxxx
 CLERK_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxx
 
 # MCP Server Credentials (Optional - for OAuth)
-GITHUB_CLIENT_ID=xxxxxxxxxxxxx
-GITHUB_CLIENT_SECRET=xxxxxxxxxxxxx
+MY_GITHUB_CLIENT_ID=xxxxxxxxxxxxx
+MY_GITHUB_CLIENT_SECRET=xxxxxxxxxxxxx
 
 NOTION_CLIENT_ID=xxxxxxxxxxxxx
 NOTION_CLIENT_SECRET=xxxxxxxxxxxxx

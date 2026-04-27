@@ -127,17 +127,14 @@ jobs:
           POSTGRES_SSL_MODE: ${{ secrets.POSTGRES_SSL_MODE }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          GITHUB_CLIENT_ID: ${{ vars.GITHUB_CLIENT_ID }}
-          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MY_GITHUB_CLIENT_ID: ${{ vars.MY_GITHUB_CLIENT_ID }}
+          MY_GITHUB_CLIENT_SECRET: ${{ secrets.MY_GITHUB_CLIENT_SECRET }}
+          MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
           NOTION_CLIENT_ID: ${{ vars.NOTION_CLIENT_ID }}
           NOTION_CLIENT_SECRET: ${{ secrets.NOTION_CLIENT_SECRET }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
-          GOOGLE_CALENDAR_ACCESS_TOKEN: ${{ secrets.GOOGLE_CALENDAR_ACCESS_TOKEN }}
-          GMAIL_ACCESS_TOKEN: ${{ secrets.GMAIL_ACCESS_TOKEN }}
           GOOGLE_OAUTH_SCOPES: ${{ vars.GOOGLE_OAUTH_SCOPES }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
@@ -168,17 +165,14 @@ jobs:
               "POSTGRES_SSL_MODE",
               "REDIS_URL",
               "SECRET_KEY",
-              "GITHUB_CLIENT_ID",
-              "GITHUB_CLIENT_SECRET",
-              "GITHUB_TOKEN",
+              "MY_GITHUB_CLIENT_ID",
+              "MY_GITHUB_CLIENT_SECRET",
+              "MY_GITHUB_TOKEN",
               "NOTION_CLIENT_ID",
               "NOTION_CLIENT_SECRET",
               "NOTION_TOKEN",
               "GOOGLE_CLIENT_ID",
               "GOOGLE_CLIENT_SECRET",
-              "GOOGLE_REFRESH_TOKEN",
-              "GOOGLE_CALENDAR_ACCESS_TOKEN",
-              "GMAIL_ACCESS_TOKEN",
               "GOOGLE_OAUTH_SCOPES",
               "OPENROUTER_API_KEY",
               "OPENROUTER_BASE_URL",

@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-GITHUB_AUTH_ENDPOINT = "https://github.com/login/oauth/authorize"
-GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+MY_GITHUB_AUTH_ENDPOINT = "https://github.com/login/oauth/authorize"
+MY_GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 NOTION_AUTH_ENDPOINT = "https://api.notion.com/v1/oauth/authorize"
 NOTION_TOKEN_URL = "https://api.notion.com/v1/oauth/token"
 
@@ -36,7 +36,7 @@ def mcp_oauth_status(user: dict = Depends(get_current_user)) -> dict[str, Any]:
             "token_exchange_path": "/api/v1/mcp/oauth/google/token",
         },
         "github": {
-            "oauth_client_configured": bool(settings.GITHUB_CLIENT_ID and settings.GITHUB_CLIENT_SECRET),
+            "oauth_client_configured": bool(settings.MY_GITHUB_CLIENT_ID and settings.MY_GITHUB_CLIENT_SECRET),
             "authorize_url_path": "/api/v1/mcp/oauth/github/authorize-url",
             "token_exchange_path": "/api/v1/mcp/oauth/github/token",
         },
@@ -121,39 +121,39 @@ async def google_oauth_exchange(
 
 
 @router.get("/oauth/github/authorize-url")
-def github_oauth_authorize_url(
+def MY_GITHUB_oauth_authorize_url(
     user: dict = Depends(get_current_user),
     redirect_uri: str = Query(..., description="Must match GitHub redirect URI."),
     state: str = Query(None, description="Optional state parameter."),
 ) -> dict[str, str]:
-    if not settings.GITHUB_CLIENT_ID:
-        raise HTTPException(status_code=503, detail="GITHUB_CLIENT_ID is not configured.")
+    if not settings.MY_GITHUB_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="MY_GITHUB_CLIENT_ID is not configured.")
     params = {
-        "client_id": settings.GITHUB_CLIENT_ID,
+        "client_id": settings.MY_GITHUB_CLIENT_ID,
         "redirect_uri": redirect_uri,
         "scope": "repo user",
     }
     if state:
         params["state"] = state
-    return {"url": f"{GITHUB_AUTH_ENDPOINT}?{urlencode(params)}"}
+    return {"url": f"{MY_GITHUB_AUTH_ENDPOINT}?{urlencode(params)}"}
 
 
 @router.post("/oauth/github/token")
-async def github_oauth_exchange(
+async def MY_GITHUB_oauth_exchange(
     body: OAuthTokenRequest,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Exchange code for GitHub token and store in MCPCredential."""
-    if not settings.GITHUB_CLIENT_ID or not settings.GITHUB_CLIENT_SECRET:
+    if not settings.MY_GITHUB_CLIENT_ID or not settings.MY_GITHUB_CLIENT_SECRET:
         raise HTTPException(status_code=503, detail="GitHub OAuth not configured.")
     
     uid = parse_uuid(user["user_id"], "user_id")
     
     async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(GITHUB_TOKEN_URL, data={
-            "client_id": settings.GITHUB_CLIENT_ID,
-            "client_secret": settings.GITHUB_CLIENT_SECRET,
+        r = await client.post(MY_GITHUB_TOKEN_URL, data={
+            "client_id": settings.MY_GITHUB_CLIENT_ID,
+            "client_secret": settings.MY_GITHUB_CLIENT_SECRET,
             "code": body.code,
             "redirect_uri": body.redirect_uri,
         }, headers={"Accept": "application/json"})

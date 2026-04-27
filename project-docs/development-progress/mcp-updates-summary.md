@@ -8,11 +8,11 @@ This document provides the canonical list of tools available across all MCP serv
 
 | Tool | Description | Parameters |
 |---|---|---|
-| `github_list_prs` | List pull requests for a repository. | `repo`, `state`, `limit` |
-| `github_get_pr_details` | Get the detailed information for a single pull request. | `repo`, `pr_number` |
-| `github_list_commits` | List the commits for a pull request or branch. | `repo`, `pr_number`, `branch`, `limit` |
-| `github_create_issue` | Create a new issue in a repository. | `repo`, `title`, `body`, `labels` |
-| `github_summarize_pr` | Generate a summary of the changes in a pull request. | `repo`, `pr_number` |
+| `MY_GITHUB_list_prs` | List pull requests for a repository. | `repo`, `state`, `limit` |
+| `MY_GITHUB_get_pr_details` | Get the detailed information for a single pull request. | `repo`, `pr_number` |
+| `MY_GITHUB_list_commits` | List the commits for a pull request or branch. | `repo`, `pr_number`, `branch`, `limit` |
+| `MY_GITHUB_create_issue` | Create a new issue in a repository. | `repo`, `title`, `body`, `labels` |
+| `MY_GITHUB_summarize_pr` | Generate a summary of the changes in a pull request. | `repo`, `pr_number` |
 
 ---
 

@@ -15,20 +15,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
-    "github_list_prs": {
+    "MY_GITHUB_list_prs": {
         "summary": "GitHub: list open PRs",
-        "description": "Requires GITHUB_TOKEN. Replace owner/repo.",
+        "description": "Requires MY_GITHUB_TOKEN. Replace owner/repo.",
         "value": {
             "server_id": "github",
-            "tool": "github_list_prs",
+            "tool": "MY_GITHUB_list_prs",
             "arguments": {"owner": "octocat", "repo": "Hello-World", "state": "open"},
         },
     },
-    "github_list_commits": {
+    "MY_GITHUB_list_commits": {
         "summary": "GitHub: list commits",
         "value": {
             "server_id": "github",
-            "tool": "github_list_commits",
+            "tool": "MY_GITHUB_list_commits",
             "arguments": {"owner": "octocat", "repo": "Hello-World", "branch": "main"},
         },
     },

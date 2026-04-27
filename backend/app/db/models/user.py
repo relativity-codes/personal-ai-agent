@@ -16,7 +16,7 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True, index=True)
     name = Column(String(255))
     avatar_url = Column(String(500))
-    default_github_repo = Column(String(255))
+    default_MY_GITHUB_repo = Column(String(255))
     default_notion_db = Column(String(255))
     timezone = Column(String(50), default="UTC")
     working_hours_start = Column(String(5), default="09:00")

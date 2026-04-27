@@ -71,6 +71,118 @@ Deployment is skipped for pull requests and runs for `main` pushes or manual wor
 
 Google Cloud authentication uses Workload Identity Federation rather than a long-lived JSON key.
 
+## One-Time GCP Setup
+
+Create these resources once before relying on the GitHub Actions deploy job.
+
+### 1) Set base variables
+
+```bash
+export PROJECT_ID="your-gcp-project-id"
+export REGION="us-central1"
+export GAR_REPOSITORY="personal-ai-agent"
+export SERVICE_NAME="personal-ai-agent"
+export SA_NAME="github-actions-deployer"
+export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+export GITHUB_OWNER="your-github-username-or-org"
+export GITHUB_REPO="personal-ai-agent"
+export WIF_POOL="github-pool"
+export WIF_PROVIDER="github-provider"
+```
+
+### 2) Enable required APIs
+
+```bash
+gcloud services enable \
+  artifactregistry.googleapis.com \
+  run.googleapis.com \
+  iam.googleapis.com \
+  iamcredentials.googleapis.com \
+  cloudresourcemanager.googleapis.com
+```
+
+### 3) Create Artifact Registry repository (`GAR_REPOSITORY`)
+
+```bash
+gcloud artifacts repositories create "${GAR_REPOSITORY}" \
+  --repository-format=docker \
+  --location="${REGION}" \
+  --description="Docker images for ${SERVICE_NAME}"
+```
+
+### 4) Create deployer service account (`GCP_SERVICE_ACCOUNT`)
+
+```bash
+gcloud iam service-accounts create "${SA_NAME}" \
+  --display-name="GitHub Actions Cloud Run Deployer"
+```
+
+Grant deployment permissions:
+
+```bash
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/artifactregistry.writer"
+
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
+```
+
+### 5) Create Workload Identity Federation provider (`GCP_WORKLOAD_IDENTITY_PROVIDER`)
+
+```bash
+gcloud iam workload-identity-pools create "${WIF_POOL}" \
+  --location="global" \
+  --display-name="GitHub Actions Pool"
+```
+
+```bash
+gcloud iam workload-identity-pools providers create-oidc "${WIF_PROVIDER}" \
+  --location="global" \
+  --workload-identity-pool="${WIF_POOL}" \
+  --display-name="GitHub OIDC Provider" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref"
+```
+
+Allow your GitHub repository to impersonate the service account:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')/locations/global/workloadIdentityPools/${WIF_POOL}/attribute.repository/${GITHUB_OWNER}/${GITHUB_REPO}"
+```
+
+Get provider resource name (use this value for `GCP_WORKLOAD_IDENTITY_PROVIDER`):
+
+```bash
+echo "projects/$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')/locations/global/workloadIdentityPools/${WIF_POOL}/providers/${WIF_PROVIDER}"
+```
+
+### 6) Optional: domain mapping and DNS
+
+Create mapping:
+
+```bash
+gcloud run domain-mappings create \
+  --service "${SERVICE_NAME}" \
+  --domain "api.yourdomain.com" \
+  --region "${REGION}"
+```
+
+Retrieve DNS records to add at your DNS provider:
+
+```bash
+gcloud run domain-mappings describe \
+  --domain "api.yourdomain.com" \
+  --region "${REGION}"
+```
+
 ## Runtime Services
 
 ### Database
@@ -110,7 +222,7 @@ Repository variables are used for non-secret deployment and provider identifiers
 - `CORS_ORIGINS`
 - `ALLOWED_HOSTS`
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-- `GITHUB_CLIENT_ID`
+- `MY_GITHUB_CLIENT_ID`
 - `NOTION_CLIENT_ID`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_OAUTH_SCOPES`
@@ -123,14 +235,9 @@ Repository secrets are used for runtime credentials:
 - `DATABASE_URL`, or individual `POSTGRES_*` secrets.
 - `REDIS_URL`
 - `SECRET_KEY`
-- `GITHUB_CLIENT_SECRET`
-- `GITHUB_TOKEN`
+- `MY_GITHUB_CLIENT_SECRET`
 - `NOTION_CLIENT_SECRET`
-- `NOTION_TOKEN`
 - `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REFRESH_TOKEN`
-- `GOOGLE_CALENDAR_ACCESS_TOKEN`
-- `GMAIL_ACCESS_TOKEN`
 - `OPENROUTER_API_KEY`
 
 Do not commit real tokens or private keys to `.env.example`, docs, or workflow files.

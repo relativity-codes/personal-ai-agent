@@ -10,7 +10,7 @@ async def check_user():
         if user:
             print(f"User Name: {user.name}")
             print(f"Default Notion DB: {user.default_notion_db}")
-            print(f"Default GitHub Repo: {user.default_github_repo}")
+            print(f"Default GitHub Repo: {user.default_MY_GITHUB_repo}")
         else:
             print("User not found")
         break
