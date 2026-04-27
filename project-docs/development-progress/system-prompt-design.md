@@ -303,11 +303,11 @@ You are the **Task Decomposition Agent** working under the Managerial Agent. You
 ### GITHUB MCP SERVER
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `github_list_prs` | List pull requests | repo, state, limit |
-| `github_get_pr_details` | Get PR details | repo, pr_number |
-| `github_list_commits` | List commits | repo, pr_number, branch, limit |
-| `github_create_issue` | Create issue | repo, title, body, labels |
-| `github_summarize_pr` | Summarize PR changes | repo, pr_number |
+| `MY_GITHUB_list_prs` | List pull requests | repo, state, limit |
+| `MY_GITHUB_get_pr_details` | Get PR details | repo, pr_number |
+| `MY_GITHUB_list_commits` | List commits | repo, pr_number, branch, limit |
+| `MY_GITHUB_create_issue` | Create issue | repo, title, body, labels |
+| `MY_GITHUB_summarize_pr` | Summarize PR changes | repo, pr_number |
 
 ### NOTION MCP SERVER
 | Tool | Description | Parameters |
@@ -402,7 +402,7 @@ Return a JSON array of tasks:
     "step": 2,
     "description": "Fetch open pull requests needing review",
     "mcp_server": "github",
-    "tool": "github_list_prs",
+    "tool": "MY_GITHUB_list_prs",
     "parameters": {
       "repo": "{{default_repo}}",
       "state": "open",
@@ -453,7 +453,7 @@ Return a JSON array of tasks:
     "step": 1,
     "description": "List open PRs in the repository",
     "mcp_server": "github",
-    "tool": "github_list_prs",
+    "tool": "MY_GITHUB_list_prs",
     "parameters": {
       "repo": "my-team/api-service",
       "state": "open",
@@ -467,7 +467,7 @@ Return a JSON array of tasks:
     "step": 2,
     "description": "Get details for each PR",
     "mcp_server": "github",
-    "tool": "github_get_pr_details",
+    "tool": "MY_GITHUB_get_pr_details",
     "parameters": {
       "repo": "my-team/api-service",
       "pr_number": "{{from_step1.pr_number}}"
@@ -778,10 +778,10 @@ You are the **GitHub Response Parser** for the Action Agent. Your job is to conv
 
 ## Input
 Raw GitHub API response (JSON) from one of these tools:
-- `github_list_prs`
-- `github_get_pr_details`
-- `github_list_commits`
-- `github_summarize_pr`
+- `MY_GITHUB_list_prs`
+- `MY_GITHUB_get_pr_details`
+- `MY_GITHUB_list_commits`
+- `MY_GITHUB_summarize_pr`
 
 ## Output Format
 
@@ -1257,7 +1257,7 @@ class PromptType(Enum):
     INTENT_VALIDATOR = "intent_validator"
     TASK_DECOMPOSER = "task_decomposer"
     RESPONSE_AGGREGATOR = "response_aggregator"
-    GITHUB_PARSER = "github_parser"
+    MY_GITHUB_PARSER = "MY_GITHUB_parser"
     CALENDAR_PARSER = "calendar_parser"
     NOTION_PARSER = "notion_parser"
     GMAIL_PARSER = "gmail_parser"
@@ -1290,9 +1290,9 @@ class PromptRegistry:
             "temperature": 0.5,
             "max_tokens": 1000
         },
-        PromptType.GITHUB_PARSER: {
+        PromptType.MY_GITHUB_PARSER: {
             "version": "1.0.0",
-            "path": "prompts/action/github_parser_v1.md",
+            "path": "prompts/action/MY_GITHUB_parser_v1.md",
             "temperature": 0.1,
             "max_tokens": 500
         },

@@ -1,74 +1,36 @@
-Here is the **correct Mermaid diagram** that matches your actual LangGraph flow (including intent → planner → action → response and all conditional routing):
+# Agent Graph Flow
 
-```mermaid id="k9v2m1"
+This diagram reflects the current LangGraph implementation in [`../../backend/app/agents/managerial_agent.py`](../../backend/app/agents/managerial_agent.py).
+
+```mermaid
 flowchart TD
-
-    START([Start]) --> INTENT[Intent Node]
-
-    %% ======================
-    %% INTENT ROUTING
-    %% ======================
-    INTENT --> INTENT_ROUTE{route_from_intent}
-
-    INTENT_ROUTE -->|validated_intent exists| PLANNER
-    INTENT_ROUTE -->|no intent| RESPONSE
-
-
-    %% ======================
-    %% PLANNER NODE
-    %% ======================
-    PLANNER[Task Planner Node] --> PLANNER_ROUTE{route_from_planner}
-
-    PLANNER_ROUTE -->|no tasks| RESPONSE
-    PLANNER_ROUTE -->|tasks incomplete| ACTION
-    PLANNER_ROUTE -->|tasks done| RESPONSE
-
-
-    %% ======================
-    %% ACTION NODE
-    %% ======================
-    ACTION[Action Node] --> ACTION_ROUTE{route_from_action}
-
-    ACTION_ROUTE -->|error exists| RESPONSE
-    ACTION_ROUTE -->|more tasks remain| PLANNER
-    ACTION_ROUTE -->|all tasks done| RESPONSE
-
-
-    %% ======================
-    %% GLOBAL FLOW
-    %% ======================
-    RESPONSE[Response Node] --> END([END])
+startNode["Start"] --> intentNode["Intent node"]
+intentNode --> intentRoute{"Validated intent exists?"}
+intentRoute -->|yes| plannerNode["Planner node"]
+intentRoute -->|no| responseNode["Response node"]
+plannerNode --> plannerRoute{"Tasks remain?"}
+plannerRoute -->|yes| actionNode["Action node"]
+plannerRoute -->|no| responseNode
+actionNode --> actionRoute{"More work or error?"}
+actionRoute -->|error or complete| responseNode
+actionRoute -->|more work remains| plannerNode
+responseNode --> endNode["End"]
 ```
 
----
+## Route Behavior
 
-### 🔥 What this diagram accurately reflects
+- The graph starts at `intent`.
+- `intent` returns `planner` only when `validated_intent` is present.
+- `planner` returns `action` when tasks exist and the current task index has not reached the end.
+- `action` returns `planner` when the plan still has incomplete work and returns `response` when all tracked tasks are completed or failed.
+- `response` always terminates the workflow.
 
-* **Intent Node**
+## Why This Matters
 
-  * If `validated_intent` exists → Planner
-  * Else → Response
+The graph keeps LLM reasoning and tool execution separated:
 
-* **Planner Node**
+- Intent classification decides whether the request is actionable.
+- Planning creates a structured task list.
+- Action execution handles schema validation, tool calls, result parsing, and task status updates.
+- Response generation converts the final state into user-facing text.
 
-  * No tasks → Response
-  * Tasks exist → Action
-  * Completed → Response
-
-* **Action Node**
-
-  * Error → Response
-  * More tasks → Planner (loop)
-  * Done → Response
-
-* **Response Node**
-
-  * Always terminates workflow
-
----
-
-If you want next level architecture, I can convert this into:
-
-* 🔁 **true LangGraph state machine diagram (with should_continue merged)**
-* ⚡ **async parallel action execution graph**
-* 🧠 **multi-agent planner + executor separation (enterprise scale)**
