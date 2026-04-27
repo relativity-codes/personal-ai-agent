@@ -124,7 +124,7 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return _parse_env_list(
             self.CORS_ORIGINS,
-            ["http://localhost:3000", "http://localhost:8000", "https://personal-ai-agent-k5epd6zwva-uc.a.run.app"],
+            ["http://localhost:3000", "http://localhost:8000", "https://personal-ai-agent-k5epd6zwva-uc.a.run.app", "https://pai.walkre.com"],
         )
 
     @computed_field
