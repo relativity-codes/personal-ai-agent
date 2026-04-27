@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = config("ACCESS_TOKEN_EXPIRE_MINUTES", default=30, cast=int)
     SECURE_COOKIES: bool = config("SECURE_COOKIES", default=False, cast=bool)
 
-    CORS_ORIGINS: str = config("CORS_ORIGINS", default="http://localhost:3000,http://localhost:8000,https://personal-ai-agent-k5epd6zwva-uc.a.run.app")
+    CORS_ORIGINS: str = config("CORS_ORIGINS", default="http://localhost:3000,http://localhost:8000,https://pai.walkre.com")
     ALLOWED_HOSTS: str = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,test,*")
     HOST: str = config("HOST", default="http://localhost:8000")
 
@@ -124,7 +124,7 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return _parse_env_list(
             self.CORS_ORIGINS,
-            ["http://localhost:3000", "http://localhost:8000", "https://personal-ai-agent-k5epd6zwva-uc.a.run.app"],
+            ["http://localhost:3000", "http://localhost:8000", "https://pai.walkre.com"],
         )
 
     @computed_field

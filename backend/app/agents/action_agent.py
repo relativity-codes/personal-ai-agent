@@ -2,6 +2,7 @@ import asyncio
 import time
 import json
 import logging
+from datetime import datetime
 from typing import Dict, Any, List
 
 from app.utils.logger import log_exception
@@ -71,6 +72,126 @@ class ActionAgent:
         """Safe JSON serialization using utility."""
         return safe_json_dumps(obj)
 
+    def _parse_json_content(self, content: str) -> Any:
+        """
+        Parse JSON content with a few recovery strategies for LLM outputs.
+        """
+        text = (content or "").strip()
+        if not text:
+            raise json.JSONDecodeError("Empty content", text, 0)
+
+        # Handle fenced responses like ```json ... ```
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if len(lines) >= 3:
+                text = "\n".join(lines[1:-1]).strip()
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # Try extracting the outermost JSON object.
+            start = text.find("{")
+            end = text.rfind("}")
+            if start != -1 and end != -1 and end > start:
+                return json.loads(text[start : end + 1])
+            raise
+
+    def _iso_to_datetime(self, value: str | None) -> datetime | None:
+        if not value:
+            return None
+        candidate = value.strip()
+        if not candidate:
+            return None
+        try:
+            return datetime.fromisoformat(candidate.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    def _fallback_calendar_result(self, result: Any) -> Dict[str, Any]:
+        """
+        Deterministic fallback when LLM parser output is malformed.
+        Keeps a stable shape for downstream consumers.
+        """
+        payload = result if isinstance(result, dict) else {}
+        raw_events = payload.get("events") or payload.get("items") or []
+        if not isinstance(raw_events, list):
+            raw_events = []
+
+        normalized_events: List[Dict[str, Any]] = []
+        for event in raw_events[:20]:
+            if not isinstance(event, dict):
+                continue
+
+            start_raw = (event.get("start") or {}).get("dateTime") or (event.get("start") or {}).get("date")
+            end_raw = (event.get("end") or {}).get("dateTime") or (event.get("end") or {}).get("date")
+            start_dt = self._iso_to_datetime(start_raw if isinstance(start_raw, str) else None)
+            end_dt = self._iso_to_datetime(end_raw if isinstance(end_raw, str) else None)
+
+            duration_minutes = None
+            if start_dt and end_dt:
+                duration_minutes = max(0, int((end_dt - start_dt).total_seconds() // 60))
+
+            attendees = []
+            for attendee in event.get("attendees", []):
+                if isinstance(attendee, dict):
+                    email = attendee.get("email")
+                    if isinstance(email, str) and email:
+                        attendees.append(email)
+
+            normalized_events.append(
+                {
+                    "title": event.get("summary") or "Untitled event",
+                    "start_time": start_raw,
+                    "end_time": end_raw,
+                    "duration_minutes": duration_minutes,
+                    "location": event.get("location"),
+                    "attendees": attendees,
+                    "is_online": False,
+                    "meeting_link": None,
+                    "description_preview": (event.get("description") or "")[:100] or None,
+                }
+            )
+
+        created_event = payload.get("event") if isinstance(payload.get("event"), dict) else None
+        created_event_id = None
+        if created_event:
+            created_event_id = created_event.get("id")
+            normalized_events.insert(
+                0,
+                {
+                    "title": created_event.get("summary") or "Created event",
+                    "start_time": (created_event.get("start") or {}).get("dateTime"),
+                    "end_time": (created_event.get("end") or {}).get("dateTime"),
+                    "duration_minutes": None,
+                    "location": created_event.get("location"),
+                    "attendees": [
+                        a.get("email")
+                        for a in created_event.get("attendees", [])
+                        if isinstance(a, dict) and isinstance(a.get("email"), str)
+                    ],
+                    "is_online": False,
+                    "meeting_link": None,
+                    "description_preview": (created_event.get("description") or "")[:100] or None,
+                },
+            )
+
+        total_events = len(normalized_events)
+        summary = (
+            f"Parsed {total_events} calendar event(s) with fallback formatter."
+            if total_events
+            else "No calendar events found in response."
+        )
+
+        return {
+            "summary": summary,
+            "events": normalized_events,
+            "free_slots": [],
+            "busy_percentage": None,
+            "total_events": total_events,
+            "created_event_id": created_event_id,
+            "conflict_detected": False,
+        }
+
     async def _parse_result(self, mcp_server: str, result: Any) -> Any:
         """
         Uses a specialized parser prompt to clean up and structure tool output.
@@ -100,7 +221,12 @@ class ActionAgent:
             
             parsed_content = response["choices"][0]["message"]["content"]
             logger.info(f"Action agent parsed result for {mcp_server}: {parsed_content}")
-            return json.loads(parsed_content)
+            return self._parse_json_content(parsed_content)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Malformed parser JSON for {mcp_server}: {e}")
+            if mcp_server == "calendar":
+                return self._fallback_calendar_result(result)
+            return result
         except Exception as e:
             logger.error(f"Failed to parse result for {mcp_server}: {e}")
             return result # Fallback to raw result
