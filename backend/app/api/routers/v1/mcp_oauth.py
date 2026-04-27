@@ -99,15 +99,18 @@ async def google_oauth_exchange(
             raise HTTPException(status_code=400, detail=r.text)
         data = r.json()
 
-    # Store in MCPCredential
+    existing = await MCPCredentialRepository.get_by_user_and_server(db, uid, MCPServiceId.GOOGLE)
+    existing_creds = existing.credentials if existing and existing.credentials else {}
+
+    # Store in MCPCredential.
+    # Google may not return refresh_token on subsequent consent flows; preserve the old one.
     creds = {
         "client_id": settings.GOOGLE_CLIENT_ID,
         "client_secret": settings.GOOGLE_CLIENT_SECRET,
-        "refresh_token": data.get("refresh_token"),
+        "refresh_token": data.get("refresh_token") or existing_creds.get("refresh_token"),
         "access_token": data.get("access_token"),
     }
-    
-    existing = await MCPCredentialRepository.get_by_user_and_server(db, uid, MCPServiceId.GOOGLE)
+
     if existing:
         await MCPCredentialRepository.update(db, existing.id, creds)
     else:

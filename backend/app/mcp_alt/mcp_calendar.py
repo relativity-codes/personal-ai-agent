@@ -27,12 +27,18 @@ async def get_calendar_service(user_id: Optional[str] = None):
         return None
     from app.config import settings
     
-    token = creds_data.get("access_token")
-    refresh_token = creds_data.get("refresh_token")
+    token = creds_data.get("access_token") or settings.GOOGLE_CALENDAR_ACCESS_TOKEN
+    refresh_token = creds_data.get("refresh_token") or settings.GOOGLE_REFRESH_TOKEN
     client_id = creds_data.get("client_id") or settings.GOOGLE_CLIENT_ID
     client_secret = creds_data.get("client_secret") or settings.GOOGLE_CLIENT_SECRET
 
     if not token and not refresh_token:
+        return None
+    if not token and (not refresh_token or not client_id or not client_secret):
+        logger.error(
+            "Google Calendar credentials incomplete (missing refresh/client fields) for user_id=%s",
+            user_id,
+        )
         return None
 
     creds_obj = Credentials(
@@ -43,15 +49,24 @@ async def get_calendar_service(user_id: Optional[str] = None):
         token_uri="https://oauth2.googleapis.com/token",
     )
 
-    # Handle refresh if needed
-    if creds_obj.expired and creds_obj.refresh_token:
+    # Handle refresh when credentials are not valid.
+    if not creds_obj.valid:
+        if not creds_obj.refresh_token or not client_id or not client_secret:
+            logger.error(
+                "Google Calendar token invalid and refresh fields missing for user_id=%s",
+                user_id,
+            )
+            return None
         try:
             creds_obj.refresh(Request())
             if user_id and creds_data:
                 creds_data["access_token"] = creds_obj.token
+                if getattr(creds_obj, "refresh_token", None):
+                    creds_data["refresh_token"] = creds_obj.refresh_token
                 await save_mcp_credentials(user_id, MCPServiceId.GOOGLE, creds_data)
         except Exception as e:
             logger.error(f"Failed to refresh calendar token: {e}")
+            return None
 
     return build("calendar", "v3", credentials=creds_obj)
 

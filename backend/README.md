@@ -97,6 +97,83 @@ The API will be available at `http://localhost:8000`.
 -   **Swagger UI (API Docs):** `http://localhost:8000/docs`
 -   **ReDoc:** `http://localhost:8000/redoc`
 
+## Deploying to Google Cloud Run
+
+This project is configured for a single Cloud Run service. The repo-root `Dockerfile` builds the exported Next.js frontend, copies it into `backend/static/`, installs the FastAPI backend, and runs:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port "$PORT"
+```
+
+Cloud Run sets `PORT`; the image defaults to `8080` for local container runs.
+
+### Runtime services
+
+-   **Database:** CockroachDB. Provide either `DATABASE_URL` or the Postgres-compatible parts (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_SSL_MODE`).
+-   **Cache:** Redis Cloud. Prefer `REDIS_URL` (for example `rediss://default:<password>@<host>:<port>/0` when TLS is required).
+-   **Domain:** Use Cloud Run domain mapping for the custom domain, then set `HOST`, `CORS_ORIGINS`, and `ALLOWED_HOSTS` to that domain.
+
+### GitHub Actions deployment
+
+The workflow at `.github/workflows/deploy-cloud-run.yml` runs tests, verifies the container build, pushes the image to Artifact Registry, and deploys Cloud Run on `main` or manual dispatch.
+
+Configure these GitHub repository variables:
+
+```text
+GCP_PROJECT_ID
+GCP_REGION
+GAR_REPOSITORY
+CLOUD_RUN_SERVICE
+GCP_WORKLOAD_IDENTITY_PROVIDER
+GCP_SERVICE_ACCOUNT
+HOST
+CORS_ORIGINS
+ALLOWED_HOSTS
+NEXT_PUBLIC_GOOGLE_CLIENT_ID
+GITHUB_CLIENT_ID
+NOTION_CLIENT_ID
+GOOGLE_CLIENT_ID
+GOOGLE_OAUTH_SCOPES
+OPENROUTER_BASE_URL
+OPENROUTER_DEFAULT_MODEL
+OPENROUTER_FALLBACK_MODELS
+```
+
+Configure these GitHub repository secrets as needed:
+
+```text
+DATABASE_URL
+REDIS_URL
+SECRET_KEY
+GITHUB_CLIENT_SECRET
+GITHUB_TOKEN
+NOTION_CLIENT_SECRET
+NOTION_TOKEN
+GOOGLE_CLIENT_SECRET
+GOOGLE_REFRESH_TOKEN
+GOOGLE_CALENDAR_ACCESS_TOKEN
+GMAIL_ACCESS_TOKEN
+OPENROUTER_API_KEY
+```
+
+If you do not use `DATABASE_URL`, set the individual `POSTGRES_*` secrets instead.
+
+### Manual deployment shape
+
+The GitHub workflow automates this, but the equivalent flow is:
+
+```bash
+docker build -t REGION-docker.pkg.dev/PROJECT/REPOSITORY/SERVICE:latest .
+docker push REGION-docker.pkg.dev/PROJECT/REPOSITORY/SERVICE:latest
+gcloud run deploy SERVICE \
+  --image REGION-docker.pkg.dev/PROJECT/REPOSITORY/SERVICE:latest \
+  --region REGION \
+  --allow-unauthenticated \
+  --port 8080
+```
+
+Run Alembic migrations against CockroachDB from a controlled environment (for example a gated GitHub Actions job or local admin session), not automatically on every container start.
+
 ## Running Tests
 
 To run the test suite, use `pytest`:

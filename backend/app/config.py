@@ -38,13 +38,14 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: str = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,test,*")
     HOST: str = config("HOST", default="http://localhost:8000")
 
-    POSTGRES_HOST: str = config("POSTGRES_HOST")
-    POSTGRES_PORT: int = config("POSTGRES_PORT")
-    POSTGRES_USER: str = config("POSTGRES_USER")
-    POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD")
-    POSTGRES_DB: str = config("POSTGRES_DB")
+    POSTGRES_HOST: str = config("POSTGRES_HOST", default="")
+    POSTGRES_PORT: int = config("POSTGRES_PORT", default=5432, cast=int)
+    POSTGRES_USER: str = config("POSTGRES_USER", default="")
+    POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD", default="")
+    POSTGRES_DB: str = config("POSTGRES_DB", default="")
 
 
+    _DATABASE_URL: Optional[str] = config("DATABASE_URL", default=None)
     POSTGRES_SSL_MODE: Optional[str] = config("POSTGRES_SSL_MODE", default=None)
     _POSTGRES_SSL_ROOT_CERT: Optional[str] = config("POSTGRES_SSL_ROOT_CERT", default=None)
 
@@ -61,6 +62,8 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        if self._DATABASE_URL:
+            return self._DATABASE_URL
         url = (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -84,14 +87,17 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: Optional[str] = config("REDIS_PASSWORD", default=None)
     REDIS_DB: str = config("REDIS_DB", default=0, cast=str)
     REDIS_USER: Optional[str] = config("REDIS_USER", default=None)
+    _REDIS_URL: Optional[str] = config("REDIS_URL", default=None)
 
 
     @property
     def REDIS_URL(self) -> str:
+        if self._REDIS_URL:
+            return self._REDIS_URL
         if self.REDIS_PASSWORD and self.REDIS_USER:
-            return f"redis://{self.REDIS_USER}:{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+            return f"redis://{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{int(self.REDIS_DB)}"
         if self.REDIS_PASSWORD and not self.REDIS_USER:
-            return f"redis://:{self.REDIS_USER}:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{int(self.REDIS_DB)}"
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{int(self.REDIS_DB)}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{int(self.REDIS_DB)}"
 
     OPENROUTER_API_KEY: str = config("OPENROUTER_API_KEY", default="")
@@ -119,12 +125,6 @@ class Settings(BaseSettings):
             self.OPENROUTER_FALLBACK_MODELS,
             ["openai/gpt-4o", "meta-llama/llama-3-70b-instruct"],
         )
-
-    CLERK_SECRET_KEY: str = config("CLERK_SECRET_KEY", default="")
-    CLERK_PUBLISHABLE_KEY: str = config("CLERK_PUBLISHABLE_KEY", default="")
-    CLERK_WEBHOOK_SECRET: str = config("CLERK_WEBHOOK_SECRET", default="")
-    # Clerk session JWT issuer, e.g. https://your-instance.clerk.accounts.dev
-    CLERK_ISSUER: str = config("CLERK_ISSUER", default="")
 
     GITHUB_CLIENT_ID: Optional[str] = config("GITHUB_CLIENT_ID", default=None)
     GITHUB_CLIENT_SECRET: Optional[str] = config("GITHUB_CLIENT_SECRET", default=None)
