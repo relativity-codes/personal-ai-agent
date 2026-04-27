@@ -147,7 +147,8 @@ gcloud iam workload-identity-pools providers create-oidc "${WIF_PROVIDER}" \
   --workload-identity-pool="${WIF_POOL}" \
   --display-name="GitHub OIDC Provider" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref"
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+  --attribute-condition="assertion.repository=='${GITHUB_OWNER}/${GITHUB_REPO}' && assertion.ref=='refs/heads/main'"
 ```
 
 Allow your GitHub repository to impersonate the service account:
@@ -163,6 +164,35 @@ Get provider resource name (use this value for `GCP_WORKLOAD_IDENTITY_PROVIDER`)
 ```bash
 echo "projects/$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')/locations/global/workloadIdentityPools/${WIF_POOL}/providers/${WIF_PROVIDER}"
 ```
+
+If the provider already exists and auth fails with:
+
+`google-github-actions/auth failed ... unauthorized_client ... The given credential is rejected by the attribute condition`
+
+update the provider condition:
+
+```bash
+gcloud iam workload-identity-pools providers update-oidc "${WIF_PROVIDER}" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --workload-identity-pool="${WIF_POOL}" \
+  --attribute-condition="assertion.repository=='${GITHUB_OWNER}/${GITHUB_REPO}' && assertion.ref=='refs/heads/main'"
+```
+
+Then verify:
+
+```bash
+gcloud iam workload-identity-pools providers describe "${WIF_PROVIDER}" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --workload-identity-pool="${WIF_POOL}" \
+  --format="yaml(attributeMapping,attributeCondition)"
+```
+
+Notes:
+
+- This workflow deploys only from `main`; keep the condition aligned with `refs/heads/main`.
+- `workflow_dispatch` runs should also target `main` unless you intentionally loosen the condition.
 
 ### 6) Optional: domain mapping and DNS
 
