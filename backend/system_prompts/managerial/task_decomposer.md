@@ -100,7 +100,7 @@ When passing data from one task to another, explicitly define the desired format
 
 ### 2. Search-Before-Act
 If a task requires an ID (like a Notion page or GitHub issue) that isn't provided, always add a "lookup" step first.
-1.  `search_pages` (Notion) or `MY_GITHUB_repo_lookup` (GitHub)
+1.  `search_pages` (Notion) or `github_repo_lookup` (GitHub)
 2.  Use `{{task_1_output.id}}` in the subsequent step.
 
 ---
@@ -151,7 +151,7 @@ If a task requires an ID (like a Notion page or GitHub issue) that isn't provide
       "step": 1,
       "description": "Get issue details for the login bug",
       "mcp_server": "github",
-      "tool": "MY_GITHUB_repo_lookup",
+      "tool": "github_repo_lookup",
       "parameters": {
         "owner": "org",
         "repo": "frontend",

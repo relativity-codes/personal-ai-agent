@@ -22,8 +22,8 @@ class GitHubMCPServer(MCPServer):
         self._token = (settings.MY_GITHUB_TOKEN or "").strip()
 
     def _effective_token(self, oauth: MCPInvokeOAuth | None) -> str:
-        if oauth and (oauth.MY_GITHUB_token or "").strip():
-            return oauth.MY_GITHUB_token.strip()
+        if oauth and (oauth.github_token or "").strip():
+            return oauth.github_token.strip()
         return self._token
 
     def is_configured(self) -> bool:
@@ -33,7 +33,7 @@ class GitHubMCPServer(MCPServer):
         # Preserving original tools and adding new ones for enhanced functionality
         existing_tools = [
             ToolDefinition(
-                name="MY_GITHUB_list_prs",
+                name="github_list_prs",
                 description="List pull requests for a repository.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -45,7 +45,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_get_pr_details",
+                name="github_get_pr_details",
                 description="Get the details of a specific pull request.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -57,7 +57,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_list_commits",
+                name="github_list_commits",
                 description="List commits on a branch.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -69,7 +69,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_create_issue",
+                name="github_create_issue",
                 description="Create a new issue in a repository.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -82,7 +82,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_summarize_pr",
+                name="github_summarize_pr",
                 description="Get the diff of a pull request for summarization.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -97,7 +97,7 @@ class GitHubMCPServer(MCPServer):
         
         new_tools = [
             ToolDefinition(
-                name="MY_GITHUB_get_repo_details",
+                name="github_get_repo_details",
                 description="Get high-level details about a repository.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -108,7 +108,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_list_repo_contents",
+                name="github_list_repo_contents",
                 description="List files and directories at a given path in a repository.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -120,7 +120,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_add_pr_comment",
+                name="github_add_pr_comment",
                 description="Add a comment to an existing pull request.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -133,7 +133,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_create_pr",
+                name="github_create_pr",
                 description="Create a new pull request.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -148,7 +148,7 @@ class GitHubMCPServer(MCPServer):
                 },
             ),
             ToolDefinition(
-                name="MY_GITHUB_merge_pr",
+                name="github_merge_pr",
                 description="Merge a pull request.",
                 input_schema={                    "type": "object",
                     "properties": {
@@ -186,17 +186,17 @@ class GitHubMCPServer(MCPServer):
         try:
             async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
                 # --- Existing Tool Implementations ---
-                if tool_name == "MY_GITHUB_list_prs":
+                if tool_name == "github_list_prs":
                     r = await client.get(f"{base_url}/pulls", params={"state": arguments.get("state", "open")})
-                elif tool_name == "MY_GITHUB_get_pr_details":
+                elif tool_name == "github_get_pr_details":
                     pr_number = arguments["pr_number"]
                     r = await client.get(f"{base_url}/pulls/{pr_number}")
-                elif tool_name == "MY_GITHUB_list_commits":
+                elif tool_name == "github_list_commits":
                     r = await client.get(f"{base_url}/commits", params={"sha": arguments.get("branch", "main")})
-                elif tool_name == "MY_GITHUB_create_issue":
+                elif tool_name == "github_create_issue":
                     payload = {"title": arguments["title"], "body": arguments.get("body", "")}
                     r = await client.post(f"{base_url}/issues", json=payload)
-                elif tool_name == "MY_GITHUB_summarize_pr":
+                elif tool_name == "github_summarize_pr":
                     pr_number = arguments["pr_number"]
                     diff_headers = headers.copy()
                     diff_headers["Accept"] = "application/vnd.github.v3.diff"
@@ -204,16 +204,16 @@ class GitHubMCPServer(MCPServer):
                     return {"ok": True, "diff": r.text} if r.is_success else self._http_error(r)
                 
                 # --- New Tool Implementations ---
-                elif tool_name == "MY_GITHUB_get_repo_details":
+                elif tool_name == "github_get_repo_details":
                     r = await client.get(base_url)
-                elif tool_name == "MY_GITHUB_list_repo_contents":
+                elif tool_name == "github_list_repo_contents":
                     path = arguments.get("path", "")
                     r = await client.get(f"{base_url}/contents/{path}")
-                elif tool_name == "MY_GITHUB_add_pr_comment":
+                elif tool_name == "github_add_pr_comment":
                     pr_number = arguments["pr_number"]
                     payload = {"body": arguments["comment"]}
                     r = await client.post(f"{base_url}/issues/{pr_number}/comments", json=payload)
-                elif tool_name == "MY_GITHUB_create_pr":
+                elif tool_name == "github_create_pr":
                     payload = {
                         "head": arguments["head"],
                         "base": arguments["base"],
@@ -221,7 +221,7 @@ class GitHubMCPServer(MCPServer):
                         "body": arguments.get("body", ""),
                     }
                     r = await client.post(f"{base_url}/pulls", json=payload)
-                elif tool_name == "MY_GITHUB_merge_pr":
+                elif tool_name == "github_merge_pr":
                     pr_number = arguments["pr_number"]
                     payload = {"merge_method": arguments.get("merge_method", "merge")}
                     r = await client.put(f"{base_url}/pulls/{pr_number}/merge", json=payload)

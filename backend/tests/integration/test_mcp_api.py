@@ -23,7 +23,7 @@ async def test_mcp_tools_lists_tool_catalog(client):
     data = r.json()
     assert "integrations" in data
     by_id = {b["server_id"]: b for b in data["integrations"]}
-    assert "MY_GITHUB_list_prs" in {t["name"] for t in by_id["github"]["tools"]}
+    assert "github_list_prs" in {t["name"] for t in by_id["github"]["tools"]}
     assert "query_database" in {t["name"] for t in by_id["notion"]["tools"]}
 
 
@@ -76,7 +76,7 @@ async def test_mcp_oauth_status(client):
     assert r.status_code == 200
     body = r.json()
     assert body["google"]["invoke_oauth_fields"]
-    assert "MY_GITHUB_token" in body["github"]["invoke_oauth_fields"]
+    assert "github_token" in body["github"]["invoke_oauth_fields"]
 
 
 @pytest.mark.asyncio

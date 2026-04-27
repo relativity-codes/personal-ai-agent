@@ -12,7 +12,7 @@ class ToolDefinition(BaseModel):
 class MCPInvokeOAuth(BaseModel):
     """Per-request credential overrides for MCP tools (until user vault is wired)."""
 
-    MY_GITHUB_token: str | None = None
+    github_token: str | None = None
     notion_token: str | None = None
     google_refresh_token: str | None = None
     google_calendar_access_token: str | None = None

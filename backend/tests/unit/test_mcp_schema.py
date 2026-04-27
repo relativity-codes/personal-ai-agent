@@ -2,7 +2,7 @@ from app.mcp.schema import InvokeRequest, MCPInvokeOAuth, ToolDefinition
 
 
 def test_invoke_request_defaults():
-    r = InvokeRequest(server_id="github", tool="MY_GITHUB_list_prs")
+    r = InvokeRequest(server_id="github", tool="github_list_prs")
     assert r.arguments == {}
     assert r.oauth is None
 

@@ -16,7 +16,7 @@ You MUST return STRICT JSON only. No explanations.
 * delete_event
 * pr_management
 * create_issue
-* MY_GITHUB_repo_lookup
+* github_repo_lookup
 * agenda_preparation
 * search_pages
 * create_page
@@ -42,7 +42,7 @@ You MUST choose one. Never invent new intents.
 | delete_event          | ["calendar"]                     |
 | pr_management         | ["github"]                       |
 | create_issue          | ["github"]                       |
-| MY_GITHUB_repo_lookup    | ["github"]                       |
+| github_repo_lookup    | ["github"]                       |
 | agenda_preparation    | ["calendar", "github", "notion"] |
 | search_pages          | ["notion"]                       |
 | create_page           | ["notion"]                       |

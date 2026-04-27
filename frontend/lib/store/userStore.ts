@@ -9,7 +9,7 @@ interface User {
   name?: string;
   avatar_url?: string;
   timezone?: string;
-  default_MY_GITHUB_repo?: string;
+  default_github_repo?: string;
   default_notion_db?: string;
   is_active?: boolean;
 }

@@ -9,7 +9,7 @@ from app.mcp.calendar import CalendarMCPServer
 from app.mcp.registry import MCPRegistryService
 
 
-def _skip_if_no_MY_GITHUB_token() -> None:
+def _skip_if_no_github_token() -> None:
     if not settings.MY_GITHUB_TOKEN.strip():
         pytest.skip("Set MY_GITHUB_TOKEN in backend/.env for live GitHub tests")
 
@@ -41,13 +41,13 @@ def _calendar_oauth_message_scenario() -> bool:
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_MY_GITHUB_list_pull_requests_via_http(client):
-    _skip_if_no_MY_GITHUB_token()
+async def test_live_github_list_pull_requests_via_http(client):
+    _skip_if_no_github_token()
     r = await client.post(
         "/api/v1/mcp/invoke",
         json={
             "server_id": "github",
-            "tool": "MY_GITHUB_list_prs",
+            "tool": "github_list_prs",
             "arguments": {
                 "owner": settings.MY_GITHUB_TEST_OWNER,
                 "repo": settings.MY_GITHUB_TEST_REPO,
@@ -63,14 +63,14 @@ async def test_live_MY_GITHUB_list_pull_requests_via_http(client):
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_MY_GITHUB_list_commits_via_registry():
-    _skip_if_no_MY_GITHUB_token()
+async def test_live_github_list_commits_via_registry():
+    _skip_if_no_github_token()
     reg = MCPRegistryService()
     await reg.initialize()
     gh = reg.get("github")
     assert gh is not None
     out = await gh.invoke(
-        "MY_GITHUB_list_commits",
+        "github_list_commits",
         {
             "owner": settings.MY_GITHUB_TEST_OWNER,
             "repo": settings.MY_GITHUB_TEST_REPO,

@@ -21,7 +21,7 @@ export function ProfileSettingsView() {
     if (user) {
       setName(user.name || "");
       setTimezone(user.timezone || "UTC");
-      setGithubRepo((user as any).default_MY_GITHUB_repo || "");
+      setGithubRepo((user as any).default_github_repo || "");
       setNotionDb((user as any).default_notion_db || "");
     }
   }, [user]);
@@ -44,7 +44,7 @@ export function ProfileSettingsView() {
         body: JSON.stringify({
           name,
           timezone,
-          default_MY_GITHUB_repo: githubRepo,
+          default_github_repo: githubRepo,
           default_notion_db: notionDb,
         }),
       });
