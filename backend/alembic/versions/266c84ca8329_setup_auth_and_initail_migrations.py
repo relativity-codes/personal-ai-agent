@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(length=255), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=True),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
-    sa.Column('default_MY_GITHUB_repo', sa.String(length=255), nullable=True),
+    sa.Column('default_github_repo', sa.String(length=255), nullable=True),
     sa.Column('default_notion_db', sa.String(length=255), nullable=True),
     sa.Column('timezone', sa.String(length=50), nullable=True),
     sa.Column('working_hours_start', sa.String(length=5), nullable=True),

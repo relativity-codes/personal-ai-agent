@@ -18,7 +18,7 @@ You MUST choose from:
 * delete_event
 * pr_management
 * create_issue
-* MY_GITHUB_repo_lookup
+* github_repo_lookup
 * agenda_preparation
 * search_pages
 * create_page
@@ -65,7 +65,7 @@ If normalization is not possible → require clarification.
 | delete_event          | ["calendar"]                     |
 | pr_management         | ["github"]                       |
 | create_issue          | ["github"]                       |
-| MY_GITHUB_repo_lookup    | ["github"]                       |
+| github_repo_lookup    | ["github"]                       |
 | agenda_preparation    | ["calendar", "github", "notion"] |
 | search_pages          | ["notion"]                       |
 | create_page           | ["notion"]                       |
@@ -141,9 +141,9 @@ Return ONLY:
 
 ## Proactive Clarification (FALLBACKS)
 If `needs_clarification=true`, use the `User Context` to provide specific suggestions:
-*   **Missing Repository**: Suggest the `default_MY_GITHUB_repo` from the context or recently used repos.
+*   **Missing Repository**: Suggest the `default_github_repo` from the context or recently used repos.
 *   **Missing Notion DB**: Suggest the `default_notion_db` or a common "Tasks" database.
-*   **Format**: "Which repository should I use? (e.g., {{user_context.default_MY_GITHUB_repo}} or org/other)"
+*   **Format**: "Which repository should I use? (e.g., {{user_context.default_github_repo}} or org/other)"
 
 ---
 

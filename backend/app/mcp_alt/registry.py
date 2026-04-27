@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from mcp.server.fastmcp import FastMCP as Server
 
 # Import our servers
-from app.mcp_alt.github import server as MY_GITHUB_server
+from app.mcp_alt.github import server as github_server
 from app.mcp_alt.notion import server as notion_server
 from app.mcp_alt.mcp_calendar import server as calendar_server
 from app.mcp_alt.gmail import server as gmail_server
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class MCPAltRegistry:
     def __init__(self) -> None:
         self._servers: Dict[str, Server] = {
-            "github": MY_GITHUB_server,
+            "github": github_server,
             "notion": notion_server,
             "calendar": calendar_server,
             "gmail": gmail_server,

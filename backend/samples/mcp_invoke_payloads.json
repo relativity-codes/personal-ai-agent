@@ -1,18 +1,18 @@
 {
   "_instructions": "POST /api/v1/mcp/invoke with Content-Type: application/json. Send ONE object from 'payloads' as the raw body — do not send { \"name\": ..., \"body\": ... }. Swagger: paste only the inner object (e.g. payloads.gmail_list_threads).",
   "payloads": {
-    "MY_GITHUB_list_prs": {
+    "github_list_prs": {
       "server_id": "github",
-      "tool": "MY_GITHUB_list_prs",
+      "tool": "github_list_prs",
       "arguments": {
         "owner": "octocat",
         "repo": "Hello-World",
         "state": "open"
       }
     },
-    "MY_GITHUB_list_commits": {
+    "github_list_commits": {
       "server_id": "github",
-      "tool": "MY_GITHUB_list_commits",
+      "tool": "github_list_commits",
       "arguments": {
         "owner": "octocat",
         "repo": "Hello-World",

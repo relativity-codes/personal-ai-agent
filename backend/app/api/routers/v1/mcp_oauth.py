@@ -121,7 +121,7 @@ async def google_oauth_exchange(
 
 
 @router.get("/oauth/github/authorize-url")
-def MY_GITHUB_oauth_authorize_url(
+def github_oauth_authorize_url(
     user: dict = Depends(get_current_user),
     redirect_uri: str = Query(..., description="Must match GitHub redirect URI."),
     state: str = Query(None, description="Optional state parameter."),
@@ -139,7 +139,7 @@ def MY_GITHUB_oauth_authorize_url(
 
 
 @router.post("/oauth/github/token")
-async def MY_GITHUB_oauth_exchange(
+async def github_oauth_exchange(
     body: OAuthTokenRequest,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
