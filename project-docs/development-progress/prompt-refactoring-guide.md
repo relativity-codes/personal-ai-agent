@@ -32,7 +32,7 @@ backend/
 └── system_prompts/
     ├── action/
     │   ├── calendar_parser.md
-    │   ├── github_parser.md
+    │   ├── MY_GITHUB_parser.md
     │   ├── gmail_parser.md
     │   └── notion_parser.md
     ├── intent/

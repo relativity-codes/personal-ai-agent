@@ -15,20 +15,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
-    "github_list_prs": {
+    "MY_GITHUB_list_prs": {
         "summary": "GitHub: list open PRs",
-        "description": "Requires GITHUB_TOKEN. Replace owner/repo.",
+        "description": "Requires MY_GITHUB_TOKEN. Replace owner/repo.",
         "value": {
             "server_id": "github",
-            "tool": "github_list_prs",
+            "tool": "MY_GITHUB_list_prs",
             "arguments": {"owner": "octocat", "repo": "Hello-World", "state": "open"},
         },
     },
-    "github_list_commits": {
+    "MY_GITHUB_list_commits": {
         "summary": "GitHub: list commits",
         "value": {
             "server_id": "github",
-            "tool": "github_list_commits",
+            "tool": "MY_GITHUB_list_commits",
             "arguments": {"owner": "octocat", "repo": "Hello-World", "branch": "main"},
         },
     },
@@ -56,7 +56,7 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
     },
     "calendar_list_events": {
         "summary": "Calendar: list events",
-        "description": "Uses GOOGLE_REFRESH_TOKEN+client id/secret or GOOGLE_CALENDAR_ACCESS_TOKEN. RFC3339 times.",
+        "description": "Uses user-scoped Google OAuth credentials (stored per user in DB). RFC3339 times.",
         "value": {
             "server_id": "calendar",
             "tool": "list_events",
@@ -82,7 +82,7 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
     },
     "gmail_list_threads": {
         "summary": "Gmail: list threads",
-        "description": "Uses GOOGLE_REFRESH_TOKEN+client id/secret (with Gmail scope) or GMAIL_ACCESS_TOKEN.",
+        "description": "Uses user-scoped Google OAuth credentials (with Gmail scope, stored per user in DB).",
         "value": {
             "server_id": "gmail",
             "tool": "list_threads",

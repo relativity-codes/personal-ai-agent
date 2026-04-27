@@ -16,7 +16,7 @@ class UserRead(BaseModel):
     email: EmailStr
     name: Optional[str] = None
     avatar_url: Optional[str] = None
-    default_github_repo: Optional[str] = None
+    default_MY_GITHUB_repo: Optional[str] = None
     default_notion_db: Optional[str] = None
     timezone: Optional[str] = None
     working_hours_start: Optional[str] = None
@@ -32,7 +32,7 @@ class UserRead(BaseModel):
 class UserUpdate(BaseModel):
     name: str | None = None
     timezone: str | None = Field(default=None, max_length=50)
-    default_github_repo: str | None = Field(default=None, max_length=255)
+    default_MY_GITHUB_repo: str | None = Field(default=None, max_length=255)
     default_notion_db: str | None = Field(default=None, max_length=255)
 
 class UserCreate(BaseModel):

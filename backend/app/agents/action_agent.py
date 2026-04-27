@@ -14,7 +14,7 @@ from app.db.repositories.plan_repository import PlanRepository
 from app.utils.serialization import make_serializable, safe_json_dumps
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import (
-    ACTION_GITHUB_PARSER_PROMPT,
+    ACTION_MY_GITHUB_PARSER_PROMPT,
     ACTION_CALENDAR_PARSER_PROMPT,
     ACTION_NOTION_PARSER_PROMPT,
     ACTION_GMAIL_PARSER_PROMPT
@@ -76,7 +76,7 @@ class ActionAgent:
         Uses a specialized parser prompt to clean up and structure tool output.
         """
         parser_prompts = {
-            "github": ACTION_GITHUB_PARSER_PROMPT,
+            "github": ACTION_MY_GITHUB_PARSER_PROMPT,
             "calendar": ACTION_CALENDAR_PARSER_PROMPT,
             "notion": ACTION_NOTION_PARSER_PROMPT,
             "gmail": ACTION_GMAIL_PARSER_PROMPT,

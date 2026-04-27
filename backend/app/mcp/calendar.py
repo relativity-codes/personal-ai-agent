@@ -22,24 +22,23 @@ class CalendarMCPServer(MCPServer):
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
-    def _has_refresh_credentials(self) -> bool:
+    def _has_refresh_credentials(self, oauth: MCPInvokeOAuth | None) -> bool:
         return bool(
             self._settings.GOOGLE_CLIENT_ID
             and self._settings.GOOGLE_CLIENT_SECRET
-            and (self._settings.GOOGLE_REFRESH_TOKEN or "").strip()
+            and oauth
+            and (oauth.google_refresh_token or "").strip()
         )
 
     def _refresh_token(self, oauth: MCPInvokeOAuth | None) -> str:
         if oauth and (oauth.google_refresh_token or "").strip():
             return oauth.google_refresh_token.strip()
-        return (self._settings.GOOGLE_REFRESH_TOKEN or "").strip()
+        return ""
 
     def _invocation_ready(self, oauth: MCPInvokeOAuth | None) -> bool:
         if oauth and (oauth.google_calendar_access_token or "").strip():
             return True
-        if (self._settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip():
-            return True
-        return self._has_refresh_credentials()
+        return self._has_refresh_credentials(oauth)
 
     def is_configured(self) -> bool:
         return self._invocation_ready(None) or (self._settings.GOOGLE_CLIENT_ID and self._settings.GOOGLE_CLIENT_SECRET)

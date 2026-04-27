@@ -4,33 +4,35 @@ Monorepo with a **FastAPI** backend (`backend/`) and a **Next.js** frontend (`fr
 
 ## Getting Started
 
-This guide will walk you through setting up the project for development. You can either follow the manual setup process or use the automated script.
+This guide will walk you through setup and local run options. The recommended path is the root script `build_and_serve.sh`. The manual process below is mainly for developers who want fine-grained control.
 
 ### Prerequisites
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python 3.11+)
 - [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/getting-started/install) (Classic or Berry)
-- [Docker](https://www.docker.com/get-started) (for running the database)
+- PostgreSQL database access (local install or managed provider)
 
-### Automated Setup
+### Recommended: Single-Script Setup
 
-A bash script is provided to automate the setup process. The script will:
+Use `build_and_serve.sh` from the project root. It will:
 
-1.  Install backend and frontend dependencies.
-2.  Set up the environment variables.
-3.  Start the database using Docker Compose.
-4.  Apply database migrations.
-5.  Start the backend and frontend servers.
+1.  Create backend virtual environment (if missing).
+2.  Install backend dependencies.
+3.  Ensure `backend/.env` exists.
+4.  Run Alembic migrations.
+5.  Build frontend static assets.
+6.  Copy frontend build output into `backend/static/`.
+7.  Start a single FastAPI server that serves both API and frontend on port `8000`.
 
 To run the script, execute the following command from the root of the project:
 
 ```bash
-bash start_project.sh
+bash build_and_serve.sh
 ```
 
-### Manual Setup
+### Developer Workflow (Manual Setup)
 
-If you prefer to set up the project manually, follow these steps:
+If you are developing features/debugging and want full control over each step, use this manual workflow:
 
 #### 1. Environment Setup
 
@@ -61,11 +63,12 @@ yarn install
 
 #### 3. Database Setup
 
-The project uses a PostgreSQL database, which can be run with Docker Compose. From the project root, start the database:
+The project uses PostgreSQL. You can choose whichever setup fits your environment:
 
-```bash
-docker-compose up -d
-```
+- Local PostgreSQL installation
+- Managed PostgreSQL-compatible provider (for example CockroachDB)
+
+Then set the database values in `backend/.env` (`DATABASE_URL` or `POSTGRES_*` fields) to match your chosen setup.
 
 #### 4. Database Migrations
 
@@ -83,7 +86,7 @@ uv run alembic upgrade head
 
 #### 5. Running the Application
 
-Use two separate terminals to run the backend and frontend servers.
+Use separate terminals to run backend and frontend in dev mode.
 
 **Backend (port 8000):**
 
@@ -114,3 +117,9 @@ yarn install
 yarn build
 yarn start
 ```
+
+## Production Endpoint
+
+- App: https://personal-ai-agent-k5epd6zwva-uc.a.run.app
+- Health check: https://personal-ai-agent-k5epd6zwva-uc.a.run.app/health
+- API docs: https://personal-ai-agent-k5epd6zwva-uc.a.run.app/docs

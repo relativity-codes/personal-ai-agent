@@ -64,7 +64,7 @@ async def chat(
         "name": user_row.name if user_row else None,
         "email": user_row.email if user_row else None,
         "timezone": user_row.timezone if user_row else "UTC",
-        "default_github_repo": user_row.default_github_repo if user_row else None,
+        "default_MY_GITHUB_repo": user_row.default_MY_GITHUB_repo if user_row else None,
         "default_notion_db": user_row.default_notion_db if user_row else None,
     }
 

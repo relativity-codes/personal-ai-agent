@@ -66,14 +66,16 @@ async def get_token(user_id: Optional[str] = None, refresh: bool = False) -> Opt
         token_data = response.json()
 
         new_access_token = token_data.get("access_token")
-        new_refresh_token = token_data.get("refresh_token") # Check for rotation
+        new_refresh_token = token_data.get("refresh_token")  # May be omitted unless rotated
 
         if not new_access_token:
             logger.error("No access_token in response")
             return None
         
         creds["access_token"] = new_access_token
-        creds["refresh_token"] = new_refresh_token 
+        # Preserve existing refresh token when provider does not rotate/return it.
+        if new_refresh_token:
+            creds["refresh_token"] = new_refresh_token
         await save_mcp_credentials(user_id=user_id, server_id=MCPServiceId.GOOGLE, credentials=creds)
         return new_access_token
         

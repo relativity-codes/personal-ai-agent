@@ -9,9 +9,9 @@ from app.mcp.calendar import CalendarMCPServer
 from app.mcp.registry import MCPRegistryService
 
 
-def _skip_if_no_github_token() -> None:
-    if not settings.GITHUB_TOKEN.strip():
-        pytest.skip("Set GITHUB_TOKEN in backend/.env for live GitHub tests")
+def _skip_if_no_MY_GITHUB_token() -> None:
+    if not settings.MY_GITHUB_TOKEN.strip():
+        pytest.skip("Set MY_GITHUB_TOKEN in backend/.env for live GitHub tests")
 
 
 def _skip_if_no_notion_db() -> None:
@@ -22,52 +22,35 @@ def _skip_if_no_notion_db() -> None:
 
 
 def _skip_if_no_calendar_api_auth() -> None:
-    has_static = bool(settings.GOOGLE_CALENDAR_ACCESS_TOKEN.strip())
-    has_refresh = bool(
-        settings.GOOGLE_CLIENT_ID
-        and settings.GOOGLE_CLIENT_SECRET
-        and settings.GOOGLE_REFRESH_TOKEN.strip()
+    pytest.skip(
+        "Calendar live tests now require user-scoped OAuth credentials stored in DB; "
+        "seed creds via /api/v1/mcp/oauth/google/callback then run manually."
     )
-    if not has_static and not has_refresh:
-        pytest.skip(
-            "Set GOOGLE_CALENDAR_ACCESS_TOKEN or GOOGLE_REFRESH_TOKEN (+ client id/secret) for Calendar live tests"
-        )
 
 
 def _skip_if_no_gmail_api_auth() -> None:
-    has_static = bool(settings.GMAIL_ACCESS_TOKEN.strip())
-    has_refresh = bool(
-        settings.GOOGLE_CLIENT_ID
-        and settings.GOOGLE_CLIENT_SECRET
-        and settings.GOOGLE_REFRESH_TOKEN.strip()
+    pytest.skip(
+        "Gmail live tests now require user-scoped OAuth credentials stored in DB; "
+        "seed creds via /api/v1/mcp/oauth/google/callback then run manually."
     )
-    if not has_static and not has_refresh:
-        pytest.skip(
-            "Set GMAIL_ACCESS_TOKEN or GOOGLE_REFRESH_TOKEN (+ client id/secret) for live Gmail tests"
-        )
 
 
 def _calendar_oauth_message_scenario() -> bool:
-    return bool(
-        settings.GOOGLE_CLIENT_ID
-        and settings.GOOGLE_CLIENT_SECRET
-        and not settings.GOOGLE_CALENDAR_ACCESS_TOKEN.strip()
-        and not settings.GOOGLE_REFRESH_TOKEN.strip()
-    )
+    return bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET)
 
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_github_list_pull_requests_via_http(client):
-    _skip_if_no_github_token()
+async def test_live_MY_GITHUB_list_pull_requests_via_http(client):
+    _skip_if_no_MY_GITHUB_token()
     r = await client.post(
         "/api/v1/mcp/invoke",
         json={
             "server_id": "github",
-            "tool": "github_list_prs",
+            "tool": "MY_GITHUB_list_prs",
             "arguments": {
-                "owner": settings.GITHUB_TEST_OWNER,
-                "repo": settings.GITHUB_TEST_REPO,
+                "owner": settings.MY_GITHUB_TEST_OWNER,
+                "repo": settings.MY_GITHUB_TEST_REPO,
                 "state": "open",
             },
         },
@@ -80,17 +63,17 @@ async def test_live_github_list_pull_requests_via_http(client):
 
 @pytest.mark.live
 @pytest.mark.asyncio
-async def test_live_github_list_commits_via_registry():
-    _skip_if_no_github_token()
+async def test_live_MY_GITHUB_list_commits_via_registry():
+    _skip_if_no_MY_GITHUB_token()
     reg = MCPRegistryService()
     await reg.initialize()
     gh = reg.get("github")
     assert gh is not None
     out = await gh.invoke(
-        "github_list_commits",
+        "MY_GITHUB_list_commits",
         {
-            "owner": settings.GITHUB_TEST_OWNER,
-            "repo": settings.GITHUB_TEST_REPO,
+            "owner": settings.MY_GITHUB_TEST_OWNER,
+            "repo": settings.MY_GITHUB_TEST_REPO,
             "branch": "master",
         },
     )
@@ -140,7 +123,7 @@ async def test_live_calendar_list_events_real_api():
 async def test_live_calendar_list_events_oauth_token_required_with_real_env():
     if not _calendar_oauth_message_scenario():
         pytest.skip(
-            "Requires GOOGLE_CLIENT_ID+GOOGLE_CLIENT_SECRET set and GOOGLE_CALENDAR_ACCESS_TOKEN empty"
+            "Requires GOOGLE_CLIENT_ID+GOOGLE_CLIENT_SECRET set"
         )
     srv = CalendarMCPServer(settings)
     now = datetime.now(timezone.utc)
