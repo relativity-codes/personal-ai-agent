@@ -1,4 +1,3 @@
-import os
 import logging
 from typing import Optional, Any, Dict, List
 from datetime import datetime
@@ -6,6 +5,7 @@ from mcp.server.fastmcp import FastMCP
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 
 from app.mcp_alt.utils import get_mcp_credentials, save_mcp_credentials
 from app.api.schemas import MCPServiceId
@@ -15,6 +15,29 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-calendar")
 
 server = FastMCP("calendar")
+
+def _clean(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def _reauth_required_payload(service_name: str = "Google Calendar") -> Dict[str, Any]:
+    return {
+        "ok": False,
+        "error": "reauth_required",
+        "message": (
+            f"{service_name} credentials are incomplete or expired. "
+            "Reconnect Google integration to refresh tokens."
+        ),
+    }
+
+
+def _is_refresh_credential_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "refresh_token" in msg or "invalid_request" in msg or "reauth" in msg
+
 
 async def get_calendar_service(user_id: Optional[str] = None):
 
@@ -27,10 +50,12 @@ async def get_calendar_service(user_id: Optional[str] = None):
         return None
     from app.config import settings
     
-    token = creds_data.get("access_token") or settings.GOOGLE_CALENDAR_ACCESS_TOKEN
-    refresh_token = creds_data.get("refresh_token") or settings.GOOGLE_REFRESH_TOKEN
-    client_id = creds_data.get("client_id") or settings.GOOGLE_CLIENT_ID
-    client_secret = creds_data.get("client_secret") or settings.GOOGLE_CLIENT_SECRET
+    # Access token must come from user-scoped stored OAuth credentials.
+    token = _clean(creds_data.get("access_token"))
+    # Refresh token must come from user-scoped stored OAuth credentials, not global settings.
+    refresh_token = _clean(creds_data.get("refresh_token"))
+    client_id = _clean(creds_data.get("client_id") or settings.GOOGLE_CLIENT_ID)
+    client_secret = _clean(creds_data.get("client_secret") or settings.GOOGLE_CLIENT_SECRET)
 
     if not token and not refresh_token:
         return None
@@ -41,13 +66,17 @@ async def get_calendar_service(user_id: Optional[str] = None):
         )
         return None
 
-    creds_obj = Credentials(
-        token=token,
-        refresh_token=refresh_token,
-        client_id=client_id,
-        client_secret=client_secret,
-        token_uri="https://oauth2.googleapis.com/token",
-    )
+    credentials_kwargs: Dict[str, Any] = {"token": token}
+    if refresh_token:
+        credentials_kwargs.update(
+            {
+                "refresh_token": refresh_token,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        )
+    creds_obj = Credentials(**credentials_kwargs)
 
     # Handle refresh when credentials are not valid.
     if not creds_obj.valid:
@@ -78,14 +107,19 @@ async def list_events(time_min: Optional[str] = None, time_max: Optional[str] = 
         return {"ok": False, "error": "not_configured", "message": "Google Calendar not configured."}
     
     now = datetime.utcnow().isoformat() + "Z"
-    events_result = service.events().list(
-        calendarId="primary",
-        timeMin=time_min or now,
-        timeMax=time_max,
-        maxResults=max_results,
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute()
+    try:
+        events_result = service.events().list(
+            calendarId="primary",
+            timeMin=time_min or now,
+            timeMax=time_max,
+            maxResults=max_results,
+            singleEvents=True,
+            orderBy="startTime",
+        ).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     return events_result.get("items", [])
 
 @server.tool()
@@ -132,14 +166,19 @@ async def calendar_fetch_events(
             "message": "Either 'start_date' and 'end_date' must be provided, or 'date' must be provided."
         }
     
-    events_result = service.events().list(
-        calendarId="primary",
-        timeMin=start_date,
-        timeMax=end_date,
-        maxResults=max_results,
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute()
+    try:
+        events_result = service.events().list(
+            calendarId="primary",
+            timeMin=start_date,
+            timeMax=end_date,
+            maxResults=max_results,
+            singleEvents=True,
+            orderBy="startTime",
+        ).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     return {"ok": True, "events": events_result.get("items", [])}
 
 @server.tool()
@@ -160,7 +199,12 @@ async def calendar_create_event(title: str, start_time: str, end_time: str, atte
         "end": {"dateTime": end_time},
         "attendees": [{"email": e} for e in (attendees or [])]
     }
-    result = service.events().insert(calendarId="primary", body=event).execute()
+    try:
+        result = service.events().insert(calendarId="primary", body=event).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     return {"ok": True, "event": result}
 
 @server.tool()
@@ -170,7 +214,12 @@ async def calendar_get_event(event_id: str, user_id: Optional[str] = None) -> Di
     if not service:
         return {"ok": False, "error": "not_configured", "message": "Google Calendar not configured."}
     
-    result = service.events().get(calendarId="primary", eventId=event_id).execute()
+    try:
+        result = service.events().get(calendarId="primary", eventId=event_id).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     return {"ok": True, "event": result}
 
 @server.tool()
@@ -180,12 +229,22 @@ async def calendar_update_event(event_id: str, title: Optional[str] = None, star
     if not service:
         return {"ok": False, "error": "not_configured", "message": "Google Calendar not configured."}
     
-    event = service.events().get(calendarId="primary", eventId=event_id).execute()
+    try:
+        event = service.events().get(calendarId="primary", eventId=event_id).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     if title: event["summary"] = title
     if start_time: event["start"]["dateTime"] = start_time
     if end_time: event["end"]["dateTime"] = end_time
     
-    result = service.events().update(calendarId="primary", eventId=event_id, body=event).execute()
+    try:
+        result = service.events().update(calendarId="primary", eventId=event_id, body=event).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     return {"ok": True, "event": result}
 
 @server.tool()
@@ -195,7 +254,12 @@ async def calendar_delete_event(event_id: str, user_id: Optional[str] = None) ->
     if not service:
         return {"ok": False, "error": "not_configured", "message": "Google Calendar not configured."}
     
-    service.events().delete(calendarId="primary", eventId=event_id).execute()
+    try:
+        service.events().delete(calendarId="primary", eventId=event_id).execute()
+    except (RefreshError, ValueError) as e:
+        if _is_refresh_credential_error(e):
+            return _reauth_required_payload()
+        raise
     return {"ok": True, "status": "deleted"}
 
 if __name__ == "__main__":

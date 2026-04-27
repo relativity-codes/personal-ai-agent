@@ -18,7 +18,7 @@ async def exchange_refresh_token(
 ) -> str | None:
     cid = settings.GOOGLE_CLIENT_ID
     sec = settings.GOOGLE_CLIENT_SECRET
-    refresh = (refresh_token or settings.GOOGLE_REFRESH_TOKEN or "").strip()
+    refresh = (refresh_token or "").strip()
     if not cid or not sec or not refresh:
         return None
     try:
@@ -57,7 +57,7 @@ async def access_token_for_calendar(
     calendar_access_token: str | None = None,
     refresh_token: str | None = None,
 ) -> str | None:
-    direct = (calendar_access_token or settings.GOOGLE_CALENDAR_ACCESS_TOKEN or "").strip()
+    direct = (calendar_access_token or "").strip()
     if direct:
         return direct
     return await exchange_refresh_token(settings, refresh_token=refresh_token)
@@ -69,7 +69,7 @@ async def access_token_for_gmail(
     gmail_access_token: str | None = None,
     refresh_token: str | None = None,
 ) -> str | None:
-    direct = (gmail_access_token or settings.GMAIL_ACCESS_TOKEN or "").strip()
+    direct = (gmail_access_token or "").strip()
     if direct:
         return direct
     return await exchange_refresh_token(settings, refresh_token=refresh_token)

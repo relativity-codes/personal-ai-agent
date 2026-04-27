@@ -56,7 +56,7 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
     },
     "calendar_list_events": {
         "summary": "Calendar: list events",
-        "description": "Uses GOOGLE_REFRESH_TOKEN+client id/secret or GOOGLE_CALENDAR_ACCESS_TOKEN. RFC3339 times.",
+        "description": "Uses user-scoped Google OAuth credentials (stored per user in DB). RFC3339 times.",
         "value": {
             "server_id": "calendar",
             "tool": "list_events",
@@ -82,7 +82,7 @@ _INVOKE_OPENAPI_EXAMPLES: dict[str, dict[str, Any]] = {
     },
     "gmail_list_threads": {
         "summary": "Gmail: list threads",
-        "description": "Uses GOOGLE_REFRESH_TOKEN+client id/secret (with Gmail scope) or GMAIL_ACCESS_TOKEN.",
+        "description": "Uses user-scoped Google OAuth credentials (with Gmail scope, stored per user in DB).",
         "value": {
             "server_id": "gmail",
             "tool": "list_threads",
