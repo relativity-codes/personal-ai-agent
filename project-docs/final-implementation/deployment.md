@@ -1,14 +1,5 @@
 # Deployment
 
-<<<<<<< HEAD
-## Current Production URL
-
-The application is currently deployed on Google Cloud Run at:
-
-- App: https://personal-ai-agent-k5epd6zwva-uc.a.run.app
-- Health check: https://personal-ai-agent-k5epd6zwva-uc.a.run.app/health
-- API docs: https://personal-ai-agent-k5epd6zwva-uc.a.run.app/docs
-=======
 ## Summary
 
 The current production deployment path is Google Cloud Run with one service. The service runs FastAPI and serves the exported Next.js frontend from the same container.
@@ -301,5 +292,4 @@ gcloud run deploy SERVICE \
 - CockroachDB and Redis Cloud must allow network access from Cloud Run. If strict IP allowlisting is enabled, a stable egress pattern may be needed.
 - The Docker daemon was not running during the last local verification, so the Docker build was not validated locally; the GitHub Actions runner is expected to perform that check.
 - Static export means the frontend cannot depend on Next.js server runtime behavior in production.
->>>>>>> main
 

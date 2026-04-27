@@ -116,7 +116,6 @@ cd frontend
 yarn install
 yarn build
 yarn start
-<<<<<<< HEAD
 ```
 
 ## Production Endpoint
@@ -124,6 +123,3 @@ yarn start
 - App: https://personal-ai-agent-k5epd6zwva-uc.a.run.app
 - Health check: https://personal-ai-agent-k5epd6zwva-uc.a.run.app/health
 - API docs: https://personal-ai-agent-k5epd6zwva-uc.a.run.app/docs
-=======
-```
->>>>>>> main
