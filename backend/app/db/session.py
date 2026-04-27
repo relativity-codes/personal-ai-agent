@@ -1,17 +1,57 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _install_cockroach_version_parser() -> None:
+    """
+    Teach SQLAlchemy's PostgreSQL dialect to parse CockroachDB version strings.
+
+    Cockroach responds to `select pg_catalog.version()` with strings like:
+    "CockroachDB CCL v25.4.8 (...)", which SQLAlchemy's default parser rejects.
+    """
+    if getattr(PGDialect, "_pai_cockroach_patch", False):
+        return
+
+    original_get_server_version_info = PGDialect._get_server_version_info
+
+    def _patched_get_server_version_info(self, connection):  # type: ignore[no-untyped-def]
+        # Keep SQLAlchemy's default PostgreSQL behavior untouched whenever possible.
+        try:
+            return original_get_server_version_info(self, connection)
+        except AssertionError:
+            pass
+
+        version = connection.exec_driver_sql("select pg_catalog.version()").scalar()
+        version_text = str(version)
+        cockroach_match = re.search(
+            r"CockroachDB(?:\s+CCL)?\s+v(\d+)(?:\.(\d+))?(?:\.(\d+))?",
+            version_text,
+        )
+        if cockroach_match:
+            major, minor, patch = cockroach_match.group(1, 2, 3)
+            return (int(major), int(minor or 0), int(patch or 0))
+
+        raise AssertionError(f"Could not determine version from string '{version_text}'")
+
+    PGDialect._get_server_version_info = _patched_get_server_version_info
+    PGDialect._pai_cockroach_patch = True
+
+
+_install_cockroach_version_parser()
 
 engine = create_async_engine(
     settings.DATABASE_URL,
