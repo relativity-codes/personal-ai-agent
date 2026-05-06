@@ -4,33 +4,32 @@ This diagram reflects the current LangGraph implementation in [`../../backend/ap
 
 ```mermaid
 flowchart TD
-startNode["Start"] --> intentNode["Intent node"]
-intentNode --> intentRoute{"Validated intent exists?"}
-intentRoute -->|yes| plannerNode["Planner node"]
-intentRoute -->|no| responseNode["Response node"]
-plannerNode --> plannerRoute{"Tasks remain?"}
-plannerRoute -->|yes| actionNode["Action node"]
-plannerRoute -->|no| responseNode
-actionNode --> actionRoute{"More work or error?"}
-actionRoute -->|error or complete| responseNode
-actionRoute -->|more work remains| plannerNode
-responseNode --> endNode["End"]
+    startNode["Start"] --> intentNode["Intent node"]
+    intentNode --> intentRoute{"Validated intent exists?"}
+    intentRoute -->|yes| reactNode["ReAct Agent node"]
+    intentRoute -->|no| responseNode["Response node"]
+    
+    subgraph ReActLoop ["Dynamic ReAct Loop"]
+        direction TB
+        reactNode <--> toolNode["Tool node"]
+    end
+    
+    reactNode --> responseNode
+    responseNode --> endNode["End"]
 ```
 
 ## Route Behavior
 
 - The graph starts at `intent`.
-- `intent` returns `planner` only when `validated_intent` is present.
-- `planner` returns `action` when tasks exist and the current task index has not reached the end.
-- `action` returns `planner` when the plan still has incomplete work and returns `response` when all tracked tasks are completed or failed.
+- `intent` returns `react_agent` only when `validated_intent` is present.
+- `react_agent` is a high-level LangGraph agent that internally loops between LLM reasoning and tool calls.
 - `response` always terminates the workflow.
 
 ## Why This Matters
 
-The graph keeps LLM reasoning and tool execution separated:
+The refactored graph provides several improvements over the legacy plan-and-execute model:
 
-- Intent classification decides whether the request is actionable.
-- Planning creates a structured task list.
-- Action execution handles schema validation, tool calls, result parsing, and task status updates.
-- Response generation converts the final state into user-facing text.
-
+- **Adaptability**: The agent can react to intermediate results rather than following a static plan.
+- **Error Recovery**: If a tool fails, the agent can "think" of an alternative tool or parameter.
+- **Performance**: Removed the overhead of persisting complex plans in a database for every execution step.
+- **State Management**: Uses an in-memory dictionary for maximum speed during the agentic loop.

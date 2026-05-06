@@ -26,6 +26,9 @@ dependencies = [
     "notion-client>=2.2.1",
     "google-api-python-client>=2.128.0",
     "requests>=2.31.0",
+    "langchain-openai>=1.2.1",
+    "langchain-core>=1.3.3",
+    "langchain>=1.2.17",
 ]
 
 [dependency-groups]

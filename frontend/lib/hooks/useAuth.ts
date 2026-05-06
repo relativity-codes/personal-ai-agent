@@ -8,10 +8,10 @@ export function useAuth() {
   const fetchUser = async () => {
     setLoading(true);
     try {
-      // Endpoint is /api/v1/users/me based on backend inspection
-      const data:any = await apiFetch('/api/v1/users/me');
-      console.log(data, "dataaaaa")
-      setUser(data);
+      const response = await apiFetch<any>('/api/v1/users/me');
+      if (response.success) {
+        setUser(response.data);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch user');
       if (err.status === 401) {
