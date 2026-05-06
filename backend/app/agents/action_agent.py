@@ -8,7 +8,6 @@ from typing import Dict, Any, List
 from app.utils.logger import log_exception
 from app.agents.state import AgentState, TaskStatus
 from app.mcp_alt.registry import MCPAltRegistry
-from app.services.cache_service import redis_client
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
 from app.db.repositories.plan_repository import PlanRepository
@@ -49,7 +48,7 @@ class ActionAgent:
             state["task_errors"][task_id] = error
             
         if plan_id:
-            # Update DB
+            # Update via repository (handles Redis)
             await self.plan_repo.update_task_status(
                 plan_id=plan_id,
                 task_id=task_id,
@@ -57,16 +56,6 @@ class ActionAgent:
                 result=result,
                 error=error
             )
-            
-            # Update Redis cache
-            plan = await redis_client.get_json(f"plan:{plan_id}")
-            if plan:
-                plan["task_status"][task_id] = status
-                if result is not None:
-                    plan["task_results"][task_id] = result
-                if error:
-                    plan["task_errors"][task_id] = error
-                await redis_client.set_json(f"plan:{plan_id}", plan, ttl=3600)
 
     def _safe_json_dumps(self, obj: Any) -> str:
         """Safe JSON serialization using utility."""
@@ -332,9 +321,7 @@ class ActionAgent:
         plan_id = state.get("plan_id")
         plan_tasks = []
         if plan_id:
-            plan = await redis_client.get_json(f"plan:{plan_id}")
-            if not plan:
-                plan = await self.plan_repo.get(plan_id)
+            plan = await self.plan_repo.get(plan_id)
             if plan:
                 plan_tasks = plan.get("tasks", [])
 

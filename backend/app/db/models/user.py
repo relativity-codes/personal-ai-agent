@@ -26,5 +26,5 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     is_active = Column(Boolean, default=True)
 
-    plans = relationship("ExecutionPlan", back_populates="user", cascade="all, delete-orphan")
+
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")

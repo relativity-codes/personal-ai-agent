@@ -6,14 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse
 from app.api.middleware import AuthMiddleware
-from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, task_router, session_router, auth, mcp_credential_router
+from app.api.routers.v1 import agents, chat, mcp, mcp_oauth, webhooks, user_router, audit_log_router, chat_history_router, plan_router, session_router, auth, mcp_credential_router
 from app.api.websocket import chat as ws_chat
 from app.config import settings
 from app.core.openrouter import OpenRouterClient
 from app.db.session import close_db, init_db
-from app.services.cache_service import redis_client
+
 from app.mcp_alt.registry import mcp_alt_registry as mcp_registry_service
-# from app.services.mcp_registry import mcp_registry
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -22,17 +22,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    await redis_client.connect()
+
     app.state.openrouter = OpenRouterClient(
         api_key=settings.OPENROUTER_API_KEY or None,
         base_url=settings.OPENROUTER_BASE_URL,
     )
     await mcp_registry_service.initialize()
-    # await mcp_registry.initialize()
+
     logger.info("startup complete")
     yield
     await close_db()
-    await redis_client.disconnect()
+
     logger.info("shutdown complete")
 
 
@@ -62,7 +62,7 @@ app.include_router(user_router.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(audit_log_router.router, prefix="/api/v1/audit-logs", tags=["audit-logs"])
 app.include_router(chat_history_router.router, prefix="/api/v1/chat-history", tags=["chat-history"])
 app.include_router(plan_router.router, prefix="/api/v1/plans", tags=["plans"])
-app.include_router(task_router.router, prefix="/api/v1/tasks", tags=["tasks"])
+
 app.include_router(session_router.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(mcp_credential_router.router, prefix="/api/v1/mcp-credentials", tags=["mcp"])
 app.include_router(ws_chat.router, prefix="/ws", tags=["websocket"])
@@ -72,14 +72,14 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 @app.get("/health")
 async def health_check():
     from app.db.session import db_health
-    from app.services.cache_service import redis_client as rc
+
 
     return {
         "status": "healthy",
         "version": "3.0.0",
         "services": {
             "database": await db_health(),
-            "redis": await rc.health(),
+
             "mcp": await mcp_registry_service.summary(),
         },
     }
