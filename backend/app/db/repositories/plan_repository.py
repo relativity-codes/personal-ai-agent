@@ -1,93 +1,25 @@
 from __future__ import annotations
-
-import uuid
 from typing import Any
 
-from app.db.models.plan import ExecutionPlan
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import delete
-from uuid import UUID
+# Global in-memory storage for plans
+_PLAN_STORAGE: dict[str, dict[str, Any]] = {}
 
-from app.db.session import async_session_factory, async_session_scope
-
-
-def _task_to_dict(task) -> dict[str, Any]:
-    return {
-        "task_id": str(task.id),
-        "step": task.step,
-        "description": task.description,
-        "mcp_server": task.mcp_server,
-        "tool": task.tool,
-        "arguments": task.parameters,
-        "depends_on": list(task.depends_on or []),
-        "status": task.status
-    }
-
-def _plan_to_dict(row: ExecutionPlan) -> dict[str, Any]:
-    return {
-        "id": str(row.id),
-        "user_id": str(row.user_id),
-        "session_id": row.session_id,
-        "intent_type": row.intent_type,
-        "status": row.status,
-        "tasks": [_task_to_dict(t) for t in (row.tasks or [])],
-        "task_status": dict(row.task_status or {}),
-        "task_results": dict(row.task_results or {}),
-        "task_errors": dict(row.task_errors or {}),
-        "execution_order": list(row.execution_order or []),
-    }
-
-        
 class PlanRepository:
+    """
+    In-memory Plan Repository for maximum performance.
+    Plans are stored in a global dictionary.
+    """
+    
     @staticmethod
     async def get(plan_id: str) -> dict[str, Any] | None:
-        from sqlalchemy.orm import selectinload
-        pid = uuid.UUID(str(plan_id))
-        async with async_session_factory() as session:
-            stmt = select(ExecutionPlan).where(ExecutionPlan.id == pid).options(selectinload(ExecutionPlan.tasks))
-            result = await session.execute(stmt)
-            row = result.scalars().first()
-            if row is None:
-                return None
-            return _plan_to_dict(row)
+        """Fetch plan from memory."""
+        return _PLAN_STORAGE.get(plan_id)
 
     @staticmethod
     async def create(plan_data: dict[str, Any]) -> None:
-        from app.db.models.task import Task
-        async with async_session_scope() as session:
-            ep = ExecutionPlan(
-                id=uuid.UUID(str(plan_data["id"])),
-                user_id=uuid.UUID(str(plan_data["user_id"])),
-                session_id=plan_data["session_id"],
-                intent_type=plan_data["intent_type"],
-                status=plan_data.get("status", "pending"),
-                task_status=plan_data.get("task_status", {}),
-                task_results=plan_data.get("task_results", {}),
-                task_errors=plan_data.get("task_errors", {}),
-                execution_order=plan_data.get("execution_order", []),
-            )
-            
-            # Convert tasks to Task instances
-            tasks = []
-            for i, t_data in enumerate(plan_data.get("tasks", [])):
-                # Ensure task_id is a valid UUID string
-                t_id_str = str(t_data.get("task_id", uuid.uuid4()))
-                
-                tasks.append(Task(
-                    id=uuid.UUID(t_id_str),
-                    session_id=plan_data.get("session_id"),
-                    plan_id=ep.id,
-                    step=t_data.get("step", i + 1),
-                    description=t_data.get("description", "No description provided"),
-                    mcp_server=t_data.get("mcp_server", "unknown"),
-                    tool=t_data.get("tool", "unknown"),
-                    parameters=t_data.get("arguments", {}),
-                    depends_on=t_data.get("depends_on", []),
-                    status=t_data.get("status", "pending")
-                ))
-            ep.tasks = tasks
-            session.add(ep)
+        """Store plan in memory."""
+        plan_id = str(plan_data.get("id"))
+        _PLAN_STORAGE[plan_id] = plan_data
 
     @staticmethod
     async def update_task_status(
@@ -97,45 +29,32 @@ class PlanRepository:
         result: Any = None,
         error: str | None = None,
     ) -> None:
-        pid = uuid.UUID(str(plan_id))
-        async with async_session_scope() as session:
-            row = await session.get(ExecutionPlan, pid)
-            if row is None:
-                return
-            ts = dict(row.task_status or {})
-            ts[task_id] = status
-            row.task_status = ts
-            tr = dict(row.task_results or {})
-            if result is not None:
-                tr[task_id] = result
-            row.task_results = tr
-            te = dict(row.task_errors or {})
-            if error:
-                te[task_id] = error
-            row.task_errors = te
+        """Update task status directly in memory."""
+        plan = _PLAN_STORAGE.get(plan_id)
+        if not plan:
+            return
+
+        # Update task status
+        if "task_status" not in plan:
+            plan["task_status"] = {}
+        plan["task_status"][task_id] = status
+
+        # Update results
+        if result is not None:
+            if "task_results" not in plan:
+                plan["task_results"] = {}
+            plan["task_results"][task_id] = result
+
+        # Update errors
+        if error:
+            if "task_errors" not in plan:
+                plan["task_errors"] = {}
+            plan["task_errors"][task_id] = error
 
     @staticmethod
-    async def get_by_id(session: AsyncSession, plan_id: UUID):
-        result = await session.execute(select(ExecutionPlan).where(ExecutionPlan.id == plan_id))
-        return result.scalars().first()
-
-    @staticmethod
-    async def get_all(session: AsyncSession, skip: int = 0, limit: int = 100):
-        result = await session.execute(select(ExecutionPlan).offset(skip).limit(limit))
-        return result.scalars().all()
-
-    @staticmethod
-    async def update(session: AsyncSession, plan_id: UUID, **kwargs):
-        plan = await PlanRepository.get_by_id(session, plan_id)
-        if plan:
-            for key, value in kwargs.items():
-                setattr(plan, key, value)
-            await session.commit()
-            await session.refresh(plan)
-        return plan
-
-    @staticmethod
-    async def delete_by_id(session: AsyncSession, plan_id: UUID) -> bool:
-        result = await session.execute(delete(ExecutionPlan).where(ExecutionPlan.id == plan_id))
-        await session.commit()
-        return result.rowcount > 0
+    async def delete_by_id(plan_id: str) -> bool:
+        """Remove plan from memory."""
+        if plan_id in _PLAN_STORAGE:
+            del _PLAN_STORAGE[plan_id]
+            return True
+        return False

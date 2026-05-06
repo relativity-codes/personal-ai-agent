@@ -10,7 +10,6 @@ from app.agents.state import AgentState, Task, TaskStatus
 from app.db.repositories.plan_repository import PlanRepository
 from app.db.repositories.user_repository import UserRepository
 from app.db.repositories.audit_repository import AuditRepository
-from app.services.cache_service import redis_client
 from app.core.openrouter import OpenRouterClient
 from app.core.prompts import get_prompt
 from app.mcp_alt.registry import MCPAltRegistry
@@ -119,9 +118,6 @@ class TaskPlannerAgent:
 
             await self.plan_repo.create(plan_data)
 
-            # Cache plan in Redis for fast access
-            await redis_client.set_json(f"plan:{plan_id}", plan_data, ttl=3600)
-
             state["plan_id"] = plan_id
             state["tasks"] = tasks
             state["task_status"] = {task["task_id"]: TaskStatus.PENDING for task in tasks}
@@ -142,10 +138,11 @@ class TaskPlannerAgent:
         """
         plan_id = state["plan_id"]
 
-        # Get plan from cache or DB
-        plan = await redis_client.get_json(f"plan:{plan_id}")
+        # Get plan from repository (Redis)
+        plan = await self.plan_repo.get(plan_id)
         if not plan:
-            plan = await self.plan_repo.get(plan_id)
+            logger.warning(f"Plan {plan_id} not found in repository.")
+            return state
 
         task_status = plan.get("task_status", {})
         tasks = plan.get("tasks", [])
@@ -170,10 +167,10 @@ class TaskPlannerAgent:
 
         state["tasks"] = executable_tasks
         
-        # Update the plan in cache
+        # Update the plan in repository
         if plan:
             plan["task_status"] = task_status
-            await redis_client.set_json(f"plan:{plan_id}", plan, ttl=3600)
+            await self.plan_repo.create(plan)
 
         return state
 
@@ -190,9 +187,7 @@ class TaskPlannerAgent:
         """
         plan_id = state["plan_id"]
 
-        plan = await redis_client.get_json(f"plan:{plan_id}")
-        if not plan:
-            plan = await self.plan_repo.get(plan_id)
+        plan = await self.plan_repo.get(plan_id)
 
         if plan:
             plan["task_status"][task_id] = status.value
@@ -200,9 +195,9 @@ class TaskPlannerAgent:
                 plan["task_results"][task_id] = result
             if error:
                 plan["task_errors"][task_id] = error
-            await redis_client.set_json(f"plan:{plan_id}", plan, ttl=3600)
+            await self.plan_repo.create(plan)
 
-        await self.plan_repo.update_task_status(plan_id, task_id, status.value, result, error)
+        # Redundant update removed as we updated the full plan above
 
         if status == TaskStatus.COMPLETED:
             state["completed_tasks"].append(task_id)
@@ -212,28 +207,6 @@ class TaskPlannerAgent:
             state["task_errors"][task_id] = error
 
         state["task_status"][task_id] = status
-
-        return state
-
-    async def verify_completion(self, state: AgentState) -> AgentState:
-        """
-        Verify if all tasks are completed.
-        """
-        plan_id = state["plan_id"]
-        plan = await redis_client.get_json(f"plan:{plan_id}")
-
-        if not plan:
-            plan = await self.plan_repo.get(plan_id)
-
-        task_status = plan.get("task_status", {})
-
-        all_completed = all(
-            status in ["completed", "failed"]
-            for status in task_status.values()
-        )
-
-        if all_completed:
-            pass
 
         return state
 
