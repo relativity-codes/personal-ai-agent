@@ -26,9 +26,6 @@ jobs:
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
       POSTGRES_DB: test
-      REDIS_HOST: localhost
-      REDIS_PORT: "6379"
-      REDIS_DB: "0"
       DEV_AUTH_BYPASS: "false"
     steps:
       - name: Checkout
@@ -125,7 +122,6 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
           POSTGRES_SSL_MODE: ${{ secrets.POSTGRES_SSL_MODE }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           MY_GITHUB_CLIENT_ID: ${{ vars.MY_GITHUB_CLIENT_ID }}
           MY_GITHUB_CLIENT_SECRET: ${{ secrets.MY_GITHUB_CLIENT_SECRET }}
@@ -163,7 +159,6 @@ jobs:
               "POSTGRES_PASSWORD",
               "POSTGRES_DB",
               "POSTGRES_SSL_MODE",
-              "REDIS_URL",
               "SECRET_KEY",
               "MY_GITHUB_CLIENT_ID",
               "MY_GITHUB_CLIENT_SECRET",
