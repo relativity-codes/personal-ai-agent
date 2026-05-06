@@ -84,36 +84,22 @@ async def health_check():
         },
     }
 
-# -------------------------
 # Static Frontend Serving
-# -------------------------
-
 @app.get("/{full_path:path}", tags=["Frontend"])
 async def serve_frontend(full_path: str):
-    """
-    Serves the static frontend assets.
-
-    This catch-all route handles serving files for the Next.js frontend.
-    - If the requested path matches a file in the 'static' directory (e.g., an image or a JS chunk), it serves that file.
-    - Otherwise, it serves the 'index.html' file, allowing the client-side router to handle the URL.
-    """
-    # Construct the path to the file in the static directory
-    # The path should be relative to the 'backend' directory where the app runs
+    """Serves the static frontend assets or falls back to index.html for SPA routing."""
     static_file_path = os.path.join("static", full_path)
     
-    # 1. If it's a file that exists, serve it (e.g., /_next/static/...)
     if os.path.isfile(static_file_path):
         return FileResponse(static_file_path)
     
-    # 2. If it's a directory, check for index.html within it (for trailingSlash: true)
     if os.path.isdir(static_file_path):
         dir_index = os.path.join(static_file_path, "index.html")
         if os.path.isfile(dir_index):
             return FileResponse(dir_index)
 
-    # 3. Otherwise, serve root index.html for SPA routing
     index_path = os.path.join("static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     
-    return {"message": "Personal AI Agent API is running. Frontend static files not found."}
+    return {"message": "API is running. Frontend assets not found."}

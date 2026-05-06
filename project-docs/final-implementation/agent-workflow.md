@@ -9,11 +9,10 @@ The agent system is implemented with LangGraph in [`../../backend/app/agents/man
 ```text
 backend/app/
 ├── agents/
-│   ├── managerial_agent.py    # Graph assembly and routing
+│   ├── managerial_agent.py    # Graph assembly and ReAct loop
 │   ├── state.py               # AgentState schema
 │   ├── intent_agent.py        # Intent classification node
-│   ├── task_planner_agent.py  # Planning node
-│   ├── action_agent.py        # Tool execution node
+│   ├── tools.py               # MCP to LangChain tool wrapper
 │   └── response_agent.py      # Final response node
 ├── core/
 │   ├── openrouter.py          # LLM client wrapper
@@ -30,18 +29,13 @@ This matches the compiled graph in [`../../backend/app/agents/managerial_agent.p
 flowchart TD
 startNode([Start]) --> intentNode[intent]
 intentNode --> intentRoute{route_from_intent}
-intentRoute -->|validated intent| plannerNode[planner]
+intentRoute -->|validated intent| reactNode[react_agent]
 intentRoute -->|no intent| responseNode[response]
-plannerNode --> plannerRoute{route_from_planner}
-plannerRoute -->|tasks remain| actionNode[action]
-plannerRoute -->|no tasks or done| responseNode
-actionNode --> actionRoute{route_from_action}
-actionRoute -->|error or all tasks complete| responseNode
-actionRoute -->|more work| plannerNode
+reactNode --> responseNode
 responseNode --> endNode([End])
 ```
 
-For a shorter diagram-only page, see [`agent-graph-flow.md`](agent-graph-flow.md).
+For a detailed breakdown of the ReAct loop, see [`../improvement/agentic-flow-doc.md`](../improvement/agentic-flow-doc.md).
 
 ## Graph Nodes
 
@@ -51,29 +45,13 @@ The intent node classifies the user's request and decides whether the request is
 
 If no validated intent is produced, the graph routes directly to the response node.
 
-### Planner Node
+### ReAct Agent Node (The "Engine")
 
-The planner node converts the validated intent into executable tasks. It uses the MCP tool registry to understand available servers, tools, and parameter schemas. It persists execution plan data through `PlanRepository`.
+The refactored agent uses a dynamic ReAct loop through LangGraph's `create_react_agent`. It replaces the legacy Planner and Action nodes with a more flexible "Reasoning + Acting" cycle.
 
-Planner output includes:
-
-- `plan_id`
-- `tasks`
-- `task_status`
-- `execution_order`
-- task arguments and tool targets
-
-### Action Node
-
-The action node executes tasks through the runtime MCP registry. It is responsible for:
-
-- Resolving placeholders such as user context and prior task outputs.
-- Validating task arguments against cached tool schemas.
-- Invoking the selected MCP tool with the current user ID.
-- Parsing raw integration output with specialized prompts.
-- Updating task status in state, database records, and Redis cache.
-
-The current action implementation includes a tool-contract layer: dynamic tool schema lookup on registry startup, JSON Schema validation before invocation, recursive placeholder substitution for user context and prior task outputs, and safe serialization of complex tool results before downstream LLM use.
+- **Dynamic Planning**: The agent decides the next step only after seeing the results of the previous tool call.
+- **Tool Integration**: Tools are dynamically wrapped from the MCP registry into LangChain `StructuredTool` objects.
+- **In-Memory Performance**: Plan state is now stored in an in-memory dictionary for sub-millisecond updates.
 
 ### Response Node
 

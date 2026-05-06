@@ -8,7 +8,6 @@ export const MAIN_NAV_ITEMS: readonly MainNavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/chat", label: "Chat" },
   { href: "/integrations", label: "Integrations" },
-  { href: "/plans", label: "Plans" },
   { href: "/activity", label: "Activity" },
   { href: "/settings", label: "Settings" },
   { href: "/help", label: "Help" },

@@ -46,10 +46,10 @@ personal-ai-agent/
 - Google sign-in that exchanges a Google ID token for an application JWT stored in an httpOnly `access_token` cookie.
 - Authenticated API access through FastAPI middleware and route dependencies.
 - Chat endpoint that creates or validates sessions, loads chat history, invokes the LangGraph agent, and stores user/agent messages.
-- Agent workflow with intent classification, task planning, tool execution, and response synthesis.
+- Agent workflow with intent classification, dynamic ReAct reasoning, tool execution, and response synthesis.
 - MCP-style integrations for GitHub, Notion, Google Calendar, and Gmail.
 - User-scoped integration credential storage for OAuth-connected services.
-- Persistence for users, sessions, chat history, execution plans, tasks, audit logs, and MCP credentials.
+- Persistence for users, sessions, chat history, audit logs, and MCP credentials.
 - Static Next.js export served by FastAPI in production, allowing one Cloud Run service to host both frontend and backend.
 - WebSocket chat route for streaming graph steps, with REST chat as the safer baseline path.
 - Cloud Run deployment workflow through GitHub Actions, Artifact Registry, CockroachDB, Redis Cloud, and custom domain mapping.
@@ -79,7 +79,6 @@ mcpAlt --> githubSvc
 mcpAlt --> notionSvc
 mcpAlt --> googleSvc
 fastapi --> db
-fastapi --> redis
 ```
 
 The backend entrypoint is [`../../backend/app/main.py`](../../backend/app/main.py). It registers middleware, API routers, WebSocket routes, health checks, and the static frontend catch-all. The frontend export is copied into `static/` inside the Cloud Run image.
@@ -91,7 +90,7 @@ The backend entrypoint is [`../../backend/app/main.py`](../../backend/app/main.p
 3. FastAPI verifies the Google ID token, creates or loads the user, issues an application JWT, and sets the `access_token` cookie.
 4. The user submits a chat message from the chat UI.
 5. The backend creates or validates a session, loads chat history, builds `AgentState`, and invokes the LangGraph workflow.
-6. The graph classifies intent, plans tasks, executes integration tools, and synthesizes the final response.
+6. The graph classifies intent, executes a dynamic ReAct agent loop for tool calls, and synthesizes the final response.
 7. The backend persists the user message and agent response, then returns the response and `session_id`.
 
 ## Documentation Index

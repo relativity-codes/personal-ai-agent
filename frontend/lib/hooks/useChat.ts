@@ -33,11 +33,10 @@ export function useChat(initialSessionId?: string) {
         if (nodeName) {
           const agentLabels: Record<string, string> = {
             "intent": "Analyzing Intent...",
-            "task_planner": "Planning Tasks...",
-            "action": "Executing Actions...",
-            "response": "Generating Response...",
+            "react_agent": "Thinking & Executing Tools...",
+            "response": "Polishing Response...",
           };
-          setCurrentAgent(agentLabels[nodeName] || "Processing...");
+          setCurrentAgent(agentLabels[nodeName] || "Thinking...");
         }
       },
       onFinalResponse: (message, sid) => {
